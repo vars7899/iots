@@ -26,16 +26,16 @@ func (t SensorType) IsValid() bool {
 }
 
 type Sensor struct {
-	ID        SensorID
-	DeviceID  string
-	Name      string
-	Type      SensorType
-	Status    SensorStatus
-	Unit      string
-	Precision int
-	Location  string
-	MetaData  map[string]interface{}
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt
+	ID        SensorID     `gorm:"type:uuid;primaryKey"`
+	DeviceID  string       `gorm:"type:varchar(100);not null;index"`
+	Name      string       `gorm:"type:varchar(255);not null"`
+	Type      SensorType   `gorm:"type:varchar(50);not null"`
+	Status    SensorStatus `gorm:"type:varchar(50);not null"`
+	Unit      string       `gorm:"type:varchar(20)"`
+	Precision int          `gorm:"type:int"`
+	Location  string       `gorm:"type:varchar(255)"`
+	// MetaData  map[string]interface{} `gorm:"type:jsonb"`
+	CreatedAt time.Time      `gorm:"autoCreateTime"`
+	UpdatedAt time.Time      `gorm:"autoUpdateTime"`
+	DeletedAt gorm.DeletedAt `gorm:"index"`
 }

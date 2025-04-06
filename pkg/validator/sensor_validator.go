@@ -19,7 +19,7 @@ func ValidateSensor(s *sensor.Sensor) error {
 		validation.Field(&s.Unit, validation.Required, validation.Length(1, 10)),
 		validation.Field(&s.Precision, validation.Required, validation.Min(0), validation.Max(10)),
 		validation.Field(&s.Location, validation.Required, validation.Length(3, 100)),
-		validation.Field(&s.MetaData, validation.NotNil),
+		// validation.Field(&s.MetaData, validation.NotNil),
 	)
 }
 

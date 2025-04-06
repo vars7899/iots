@@ -4,61 +4,50 @@ import (
 	"log"
 	"os"
 
-	"github.com/vars7899/iots/configs"
+	"github.com/labstack/echo/v4"
+	"github.com/vars7899/iots/config"
+	api_v1 "github.com/vars7899/iots/internal/api/v1"
 	"github.com/vars7899/iots/internal/db"
+	"github.com/vars7899/iots/internal/repository/postgres"
+	"github.com/vars7899/iots/internal/service"
 	"github.com/vars7899/iots/pkg/logger"
 )
 
 func main() {
 	logger.InitLogger(false)
 
-	postgresConfig, err := configs.Load(".env.dev")
+	postgresConfig, err := config.Load(".env.dev")
 	if err != nil {
 		logger.Lgr.Error(err.Error())
 		os.Exit(1)
 	}
 
-	// // Load config
-	// cfg, err := configs.Load()
-	// if err != nil {
-	// 	log.Fatalf("failed to load config: %v", err)
-	// }
-
-	// // Initialize DB
-	// db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{})
-	// if err != nil {
-	// 	log.Fatalf("failed to connect to database: %v", err)
-	// }
-
-	// // Initialize repositories
-	// sensorRepo := postgres.NewSensorRepositoryPostgres(db)
-	// deviceRepo := postgres.NewDeviceRepositoryPostgres(db)
-
-	// // Initialize services
-	// sensorService := service.NewSensorService(sensorRepo)
-	// deviceService := service.NewDeviceService(deviceRepo)
-
-	// // Create dependency injection container
-	// deps := handler.HandlerDeps{
-	// 	SensorService: sensorService,
-	// 	DeviceService: deviceService,
-	// }
-
-	// // Initialize Echo
-	// e := echo.New()
-
-	// // Register routes with DI
-	// api.RegisterRoutes(e, deps)
-
-	// // Start server
-	// port := os.Getenv("PORT")
-	// if port == "" {
-	// 	port = "8080"
-	// }
-	// e.Logger.Fatal(e.Start(":" + port))
-
-	_, err = db.ConnectPostgres(*postgresConfig)
+	postgresDB, err := db.ConnectPostgres(*postgresConfig)
 	if err != nil {
 		log.Fatalf("database connection failed: %v", err)
 	}
+
+	// Initialize repositories
+	sensorRepo := postgres.NewSensorRepositoryPostgres(postgresDB)
+
+	// Initialize services
+	sensorService := service.NewSensorService(sensorRepo)
+
+	// Create dependency injection container
+	deps := api_v1.APIDependencies{
+		SensorService: sensorService,
+	}
+
+	// Initialize Echo
+	e := echo.New()
+
+	// Register routes with DIs
+	api_v1.RegisterRoutes(e, deps)
+
+	// Start server
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	e.Logger.Fatal(e.Start(":" + port))
 }

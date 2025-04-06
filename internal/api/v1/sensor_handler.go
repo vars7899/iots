@@ -29,9 +29,9 @@ func (h SensorHandler) ListSensor(c echo.Context) error {
 	// todo: update the sensor filter
 	sensorList, err := h.SensorService.ListSensor(ctx, sensor.SensorFilter{})
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("could not list sensors: %w", err))
+		return response.Error(c, http.StatusInternalServerError, fmt.Sprintf("could not list sensors: %w", err))
 	}
-	return c.JSON(http.StatusOK, sensorList)
+	return response.JSON(c, http.StatusOK, sensorList)
 }
 
 func (h SensorHandler) GetSensor(c echo.Context) error {

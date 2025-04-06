@@ -55,5 +55,12 @@ func (s *SensorService) DeleteSensor(ctx context.Context, sensorID string) error
 }
 
 func (s *SensorService) ListSensor(ctx context.Context, sensorFilter sensor.SensorFilter) ([]*sensor.Sensor, error) {
-	return s.repo.List(ctx, sensorFilter)
+	sensorList, err := s.repo.List(ctx, sensorFilter)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, sensor.ErrSensorNotFound
+		}
+		return nil, err
+	}
+	return sensorList, nil
 }
