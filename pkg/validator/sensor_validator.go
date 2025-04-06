@@ -42,3 +42,10 @@ func ValidateSensorStatus(value interface{}) error {
 	}
 	return fmt.Errorf("invalid status: %s", value)
 }
+
+func ValidateSensorID(sid string) error {
+	if sid == "" {
+		return sensor.ErrInvalidSensorID
+	}
+	return nil
+}

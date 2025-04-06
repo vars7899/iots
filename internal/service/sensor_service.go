@@ -2,11 +2,13 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/vars7899/iots/internal/domain/sensor"
 	"github.com/vars7899/iots/internal/repository"
 	"github.com/vars7899/iots/pkg/validator"
+	"gorm.io/gorm"
 )
 
 type SensorService struct {
@@ -25,10 +27,17 @@ func (s *SensorService) CreateSensor(ctx context.Context, sensor *sensor.Sensor)
 }
 
 func (s *SensorService) GetSensor(ctx context.Context, sensorID string) (*sensor.Sensor, error) {
-	if sensorID == "" {
-		return nil, fmt.Errorf("invalid sensor id: cannot be empty")
+	if err := validator.ValidateSensorID(sensorID); err != nil {
+		return nil, err
 	}
-	return s.repo.GetByID(ctx, sensor.SensorID(sensorID))
+	sensorData, err := s.repo.GetByID(ctx, sensor.SensorID(sensorID))
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, sensor.ErrSensorNotFound
+		}
+		return nil, err
+	}
+	return sensorData, nil
 }
 
 func (s *SensorService) UpdateSensor(ctx context.Context, sensor *sensor.Sensor) error {
@@ -39,8 +48,8 @@ func (s *SensorService) UpdateSensor(ctx context.Context, sensor *sensor.Sensor)
 }
 
 func (s *SensorService) DeleteSensor(ctx context.Context, sensorID string) error {
-	if sensorID == "" {
-		return fmt.Errorf("invalid sensor id: cannot be empty")
+	if err := validator.ValidateSensorID(string(sensorID)); err != nil {
+		return fmt.Errorf("invalid sensor id: %w", err)
 	}
 	return s.repo.Delete(ctx, sensor.SensorID(sensorID))
 }
