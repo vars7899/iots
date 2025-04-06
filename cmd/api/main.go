@@ -8,6 +8,11 @@ import (
 )
 
 func main() {
+	postgresConfig, err := configs.Load(".env.dev")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// // Load config
 	// cfg, err := configs.Load()
 	// if err != nil {
@@ -47,13 +52,7 @@ func main() {
 	// }
 	// e.Logger.Fatal(e.Start(":" + port))
 
-	_, err := db.ConnectPostgres(configs.PostgresConfig{
-		DBUser:     "iot_user",
-		DBPassword: "secret",
-		DBName:     "iot_db",
-		DBHost:     "localhost",
-		DBPort:     "5432",
-	})
+	_, err = db.ConnectPostgres(*postgresConfig)
 	if err != nil {
 		log.Fatalf("database connection failed: %v", err)
 	}
