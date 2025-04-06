@@ -1,3 +1,61 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+
+# Output of the go build command
+/build/
+/bin/
+/dist/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Vendor directory (if using `go mod vendor`)
+/vendor/
+
+# Dependency directories (remove the ones you’re not using)
+/node_modules/
+
+# Logs
+*.log
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Env config
 .env
-.env.dev
-.env.prd
+.env.*
+
+# Air (live reload) config/cache
+/tmp/
+.air
+.air.toml
+
+# Docker
+**/docker-compose.override.yml
+**/.docker/
+
+# Coverage reports
+coverage.out
+*.coverprofile
+*.cov
+
+# Database
+*.db
+*.sqlite
+
+# Generated files
+*.gen.go
