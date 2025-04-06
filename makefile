@@ -18,6 +18,6 @@ docker-up:
 docker-down:
 	sudo docker compose down
 sleep:
-	sleep 5
+	sleep 1
 
 start: docker-up sleep run

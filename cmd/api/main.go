@@ -2,15 +2,20 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/vars7899/iots/configs"
 	"github.com/vars7899/iots/internal/db"
+	"github.com/vars7899/iots/pkg/logger"
 )
 
 func main() {
+	logger.InitLogger(false)
+
 	postgresConfig, err := configs.Load(".env.dev")
 	if err != nil {
-		log.Fatal(err)
+		logger.Lgr.Error(err.Error())
+		os.Exit(1)
 	}
 
 	// // Load config

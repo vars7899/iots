@@ -2,10 +2,10 @@ package db
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/vars7899/iots/configs"
+	"github.com/vars7899/iots/pkg/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -28,7 +28,7 @@ func ConnectPostgres(cfg configs.PostgresConfig) (*gorm.DB, error) {
 	sql_db.SetMaxIdleConns(20)
 	sql_db.SetConnMaxLifetime(time.Minute * 5)
 
-	log.Println("PostgreSQL connected successfully.")
+	logger.Lgr.Info("PostgreSQL connected successfully.")
 
 	return db, nil
 }

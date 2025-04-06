@@ -3,6 +3,7 @@ package configs
 import (
 	"github.com/caarlos0/env/v11"
 	"github.com/joho/godotenv"
+	"github.com/vars7899/iots/pkg/logger"
 )
 
 type PostgresConfig struct {
@@ -14,12 +15,15 @@ type PostgresConfig struct {
 }
 
 func Load(filenames ...string) (*PostgresConfig, error) {
-	_ = godotenv.Load(filenames...)
+	if err := godotenv.Load(filenames...); err != nil {
+		return nil, err
+	}
 
 	var cfg PostgresConfig
 	if err := env.Parse(&cfg); err != nil {
 		return nil, err
 	}
 
+	logger.Lgr.Info("Configuration loaded successfully")
 	return &cfg, nil
 }
