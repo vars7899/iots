@@ -64,26 +64,53 @@ func (r SensorRepositoryPostgres) Update(ctx context.Context, s *sensor.Sensor) 
 
 func (r SensorRepositoryPostgres) List(ctx context.Context, filter sensor.SensorFilter) ([]*sensor.Sensor, error) {
 	var sensorList []sensor.Sensor
-	query := r.db.WithContext(ctx)
+	query := r.db.WithContext(ctx).Model(&sensor.Sensor{})
 
+	// Filters
 	if filter.DeviceID != nil {
-		query.Where("device_id = ?", *filter.DeviceID)
+		query = query.Where("device_id = ?", *filter.DeviceID)
 	}
 	if filter.Status != nil {
-		query.Where("status = ?", *filter.Status)
+		query = query.Where("status = ?", *filter.Status)
 	}
 	if filter.Type != nil {
-		query.Where("type = ?", *filter.Type)
+		query = query.Where("type = ?", *filter.Type)
 	}
 	if filter.CreatedAt != nil {
-		query.Where("created_at = ?", *filter.CreatedAt)
+		query = query.Where("created_at = ?", *filter.CreatedAt)
+	}
+	if filter.Name != nil {
+		query = query.Where("name ILIKE ?", "%"+*filter.Name+"%")
+	}
+	if filter.Location != nil {
+		query = query.Where("location ILIKE ?", "%"+*filter.Location+"%")
 	}
 
+	// Sorting
+	sortBy := "created_at"
+	if filter.SortBy != "" {
+		sortBy = filter.SortBy
+	}
+	sortOrder := "desc"
+	if filter.SortOrder == "asc" {
+		sortOrder = "asc"
+	}
+	query = query.Order(fmt.Sprintf("%s %s", sortBy, sortOrder))
+
+	// Pagination
+	if filter.Limit > 0 {
+		query = query.Limit(filter.Limit)
+	}
+	if filter.Offset > 0 {
+		query = query.Offset(filter.Offset)
+	}
+
+	// Execute
 	if err := query.Find(&sensorList).Error; err != nil {
 		return nil, err
 	}
 
-	// convert the sensor value to sensor pointers
+	// Convert to []*sensor.Sensor
 	sensors := make([]*sensor.Sensor, len(sensorList))
 	for i := range sensorList {
 		sensors[i] = &sensorList[i]

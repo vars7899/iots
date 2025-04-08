@@ -1,6 +1,9 @@
 package sensor
 
-import "time"
+import (
+	"strconv"
+	"time"
+)
 
 type CreateSensorDTO struct {
 	DeviceID  string `json:"device_id"`
@@ -68,4 +71,68 @@ func (dto UpdateSensorDTO) ApplyUpdates(sensor *Sensor) {
 
 	// Always update the UpdatedAt field when changes are applied
 	sensor.UpdatedAt = time.Now()
+}
+
+type SensorQueryParamsDTO struct {
+	DeviceID  string `query:"device_id"`
+	Name      string `query:"name"`
+	Type      string `query:"type"`
+	Status    string `query:"status"`
+	Unit      string `query:"unit"`
+	Precision string `query:"precision"`
+	Location  string `query:"location"`
+	CreatedAt string `query:"created_at"`
+	UpdatedAt string `query:"updated_at"`
+	Limit     int    `query:"limit"`
+	Offset    int    `query:"offset"`
+	SortBy    string `query:"sort_by"`
+	SortOrder string `query:"sort_order"`
+}
+
+func (dto *SensorQueryParamsDTO) Validate() error {
+	return ValidateSensorQueryParamsDTO(dto)
+}
+
+func (dto *SensorQueryParamsDTO) ToFilter() (SensorFilter, error) {
+	filter := SensorFilter{
+		Limit:     dto.Limit,
+		Offset:    dto.Offset,
+		SortBy:    dto.SortBy,
+		SortOrder: dto.SortOrder,
+	}
+
+	if dto.DeviceID != "" {
+		filter.DeviceID = &dto.DeviceID
+	}
+	if dto.Name != "" {
+		filter.Name = &dto.Name
+	}
+	if dto.Type != "" {
+		filter.Type = &dto.Type
+	}
+	if dto.Status != "" {
+		filter.Status = &dto.Status
+	}
+	if dto.Unit != "" {
+		filter.Unit = &dto.Unit
+	}
+	if dto.Precision != "" {
+		if p, err := strconv.Atoi(dto.Precision); err == nil {
+			filter.Precision = &p
+		}
+	}
+	if dto.Location != "" {
+		filter.Location = &dto.Location
+	}
+	if dto.CreatedAt != "" {
+		if t, err := time.Parse(time.RFC3339, dto.CreatedAt); err == nil {
+			filter.CreatedAt = &t
+		}
+	}
+	if dto.UpdatedAt != "" {
+		if t, err := time.Parse(time.RFC3339, dto.UpdatedAt); err == nil {
+			filter.UpdatedAt = &t
+		}
+	}
+	return filter, nil
 }

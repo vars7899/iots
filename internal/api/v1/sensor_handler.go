@@ -2,7 +2,6 @@ package v1
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -28,13 +27,25 @@ func (h SensorHandler) RegisterRoutes(e *echo.Group) {
 }
 
 func (h SensorHandler) ListSensor(c echo.Context) error {
-	ctx := c.Request().Context()
-
-	// todo: update the sensor filter
-	sensorList, err := h.SensorService.ListSensor(ctx, sensor.SensorFilter{})
-	if err != nil {
-		return response.Error(c, http.StatusInternalServerError, fmt.Sprintf("could not list sensors: %w", err))
+	var queryParams sensor.SensorQueryParamsDTO
+	if err := c.Bind(&queryParams); err != nil {
+		return response.Error(c, http.StatusBadRequest, "invalid query parameters")
 	}
+
+	if err := queryParams.Validate(); err != nil {
+		return response.Error(c, http.StatusBadRequest, err.Error())
+	}
+
+	filter, err := queryParams.ToFilter()
+	if err != nil {
+		return response.Error(c, http.StatusBadRequest, "invalid filter parameters")
+	}
+
+	sensorList, err := h.SensorService.ListSensor(c.Request().Context(), filter)
+	if err != nil {
+		return h.handlerError(c, err)
+	}
+
 	return response.JSON(c, http.StatusOK, sensorList)
 }
 

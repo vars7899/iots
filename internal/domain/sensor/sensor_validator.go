@@ -9,9 +9,13 @@ import (
 
 var (
 	nameValidationRules     = []validation.Rule{validation.Required, validation.Length(3, 50)}
-	typeValidationRules     = []validation.Rule{validation.Required, validation.By(ValidateSensorType)}
-	statusValidationRules   = []validation.Rule{validation.Required, validation.By(ValidateSensorStatus)}
+	typeValidationRules     = []validation.Rule{validation.Required, validation.By(validateSensorType)}
+	statusValidationRules   = []validation.Rule{validation.Required, validation.By(validateSensorStatus)}
 	locationValidationRules = []validation.Rule{validation.Required, validation.Length(3, 100)}
+
+	optionalLimitValidationRules     = []validation.Rule{validation.Min(0)}
+	optionalOffsetValidationRules    = []validation.Rule{validation.Min(0)}
+	optionalSortOrderValidationRules = []validation.Rule{validation.In("asc", "desc").Error("sort_order must be 'asc' or 'desc'")}
 
 	// Rules for optional fields (used in update DTO)
 	optionalDeviceIDValidationRules  = validatorutils.ApplyRulesWhenValueIsPresent(validatorutils.UuidValidationRule[1:])
@@ -47,29 +51,22 @@ func ValidateUpdateSensorDTO(dto *UpdateSensorDTO) error {
 	)
 }
 
-// func ValidateSensorType(value interface{}) error {
-// 	if t, ok := value.(string); ok {
-// 		sensorType := SensorType(t)
-// 		if !sensorType.IsValid() {
-// 			return fmt.Errorf("invalid sensor type: %s", t)
-// 		}
-// 		return nil
-// 	}
-// 	return fmt.Errorf("invalid type: %T", value)
-// }
+func ValidateSensorQueryParamsDTO(dto *SensorQueryParamsDTO) error {
+	return validation.ValidateStruct(dto,
+		validation.Field(&dto.DeviceID, optionalDeviceIDValidationRules...),
+		validation.Field(&dto.Name, optionalNameValidationRules...),
+		validation.Field(&dto.Type, optionalTypeValidationRules...),
+		validation.Field(&dto.Status, optionalStatusValidationRules...),
+		validation.Field(&dto.Unit, optionalUnitValidationRules...),
+		validation.Field(&dto.Precision, optionalPrecisionValidationRules...),
+		validation.Field(&dto.Location, optionalLocationValidationRules...),
+		validation.Field(&dto.Limit, optionalLimitValidationRules...),
+		validation.Field(&dto.Offset, optionalOffsetValidationRules...),
+		validation.Field(&dto.SortOrder, optionalSortOrderValidationRules...),
+	)
+}
 
-// func ValidateSensorStatus(value interface{}) error {
-// 	if s, ok := value.(string); ok {
-// 		sensorStatus := SensorStatus(s)
-// 		if !sensorStatus.IsValid() {
-// 			return fmt.Errorf("invalid sensor status: %s", s)
-// 		}
-// 		return nil
-// 	}
-// 	return fmt.Errorf("invalid status: %T", value)
-// }
-
-func ValidateSensorType(value interface{}) error {
+func validateSensorType(value interface{}) error {
 	var str string
 
 	switch v := value.(type) {
@@ -90,7 +87,7 @@ func ValidateSensorType(value interface{}) error {
 	return nil
 }
 
-func ValidateSensorStatus(value interface{}) error {
+func validateSensorStatus(value interface{}) error {
 	var str string
 
 	switch v := value.(type) {

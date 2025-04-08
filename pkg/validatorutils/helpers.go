@@ -22,6 +22,9 @@ func ApplyRulesWhenValueIsPresent(rules []validation.Rule) []validation.Rule {
 			if value == nil {
 				return nil
 			}
+			if str, ok := value.(string); ok && str == "" {
+				return nil
+			}
 			// if value present check value for rules
 			for _, rule := range rules {
 				if err := rule.Validate(value); err != nil {
