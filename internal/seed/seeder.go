@@ -21,7 +21,7 @@ func SeedSensorData(db *gorm.DB, count int) error {
 	}
 	for i := 0; i < count; i++ {
 		s := sensor.Sensor{
-			ID:       sensor.SensorID(gofakeit.UUID()), // generate UUID or custom ID
+			ID:       gofakeit.UUID(), // generate UUID or custom ID
 			DeviceID: gofakeit.UUID(),
 			Name:     gofakeit.Name(),
 			Type: sensor.SensorType(gofakeit.RandomString([]string{

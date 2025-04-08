@@ -13,7 +13,7 @@ type ResponseMetaData map[string]interface{}
 
 func JSON[T any](c echo.Context, code int, data T, args ...ResponseMetaData) error {
 	var metadata ResponseMetaData
-	if len(metadata) > 0 {
+	if len(args) > 0 {
 		metadata = args[0]
 	}
 	return c.JSON(code, SuccessResponse[T]{

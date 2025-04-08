@@ -8,8 +8,8 @@ import (
 
 type SensorRepository interface {
 	Create(ctx context.Context, s *sensor.Sensor) error
-	GetByID(ctx context.Context, sid sensor.SensorID) (*sensor.Sensor, error)
+	GetByID(ctx context.Context, sid string) (*sensor.Sensor, error)
 	Update(ctx context.Context, s *sensor.Sensor) error
-	Delete(ctx context.Context, sid sensor.SensorID) error
+	Delete(ctx context.Context, sid string) error
 	List(ctx context.Context, filter sensor.SensorFilter) ([]*sensor.Sensor, error)
 }

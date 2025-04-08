@@ -2,9 +2,11 @@ package postgres
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/vars7899/iots/internal/domain/sensor"
 	"github.com/vars7899/iots/internal/repository"
+	"github.com/vars7899/iots/pkg/validatorutils"
 	"gorm.io/gorm"
 )
 
@@ -17,27 +19,47 @@ func NewSensorRepositoryPostgres(db *gorm.DB) repository.SensorRepository {
 }
 
 func (r SensorRepositoryPostgres) Create(ctx context.Context, s *sensor.Sensor) error {
-	return r.db.WithContext(ctx).Create(s).Error
+	if err := r.db.WithContext(ctx).Create(s).Error; err != nil {
+		if validatorutils.IsPgDuplicateKeyError(err) {
+			return repository.ErrDuplicateKey
+		}
+		return fmt.Errorf("failed to create sensor: %w", err)
+	}
+	return nil
 }
 
-func (r SensorRepositoryPostgres) GetByID(ctx context.Context, sid sensor.SensorID) (*sensor.Sensor, error) {
+func (r SensorRepositoryPostgres) GetByID(ctx context.Context, sid string) (*sensor.Sensor, error) {
 	var s sensor.Sensor
-	err := r.db.WithContext(ctx).First(&s, "id = ?", sid).Error
-	if err != nil {
+
+	if err := r.db.WithContext(ctx).First(&s, "id = ?", sid).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, nil
+			return nil, repository.ErrNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to get sensor: %w", err)
 	}
 	return &s, nil
 }
 
-func (r SensorRepositoryPostgres) Delete(ctx context.Context, sid sensor.SensorID) error {
-	return r.db.WithContext(ctx).Where("id = ?", sid).Delete(&sensor.Sensor{}).Error
+func (r SensorRepositoryPostgres) Delete(ctx context.Context, sid string) error {
+	result := r.db.WithContext(ctx).Where("id = ?", sid).Delete(&sensor.Sensor{})
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete sensor: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return repository.ErrNotFound
+	}
+	return nil
 }
 
 func (r SensorRepositoryPostgres) Update(ctx context.Context, s *sensor.Sensor) error {
-	return r.db.WithContext(ctx).Save(s).Error
+	result := r.db.WithContext(ctx).Model(&sensor.Sensor{}).Where("id = ?", s.ID).Select("*").Updates(s)
+	if result.Error != nil {
+		return fmt.Errorf("failed to update sensor: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return repository.ErrNotFound
+	}
+	return nil
 }
 
 func (r SensorRepositoryPostgres) List(ctx context.Context, filter sensor.SensorFilter) ([]*sensor.Sensor, error) {

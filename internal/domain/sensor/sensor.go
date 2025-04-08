@@ -3,10 +3,9 @@ package sensor
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
-
-type SensorID string
 
 type SensorType string
 
@@ -26,16 +25,26 @@ func (t SensorType) IsValid() bool {
 }
 
 type Sensor struct {
-	ID        SensorID     `gorm:"type:uuid;primaryKey"`
-	DeviceID  string       `gorm:"type:varchar(100);not null;index"`
-	Name      string       `gorm:"type:varchar(255);not null"`
-	Type      SensorType   `gorm:"type:varchar(50);not null"`
-	Status    SensorStatus `gorm:"type:varchar(50);not null"`
-	Unit      string       `gorm:"type:varchar(20)"`
-	Precision int          `gorm:"type:int"`
-	Location  string       `gorm:"type:varchar(255)"`
-	// MetaData  map[string]interface{} `gorm:"type:jsonb"`
+	ID        string         `gorm:"type:uuid;primaryKey"`
+	DeviceID  string         `gorm:"type:varchar(100);not null;index"`
+	Name      string         `gorm:"type:varchar(255);not null"`
+	Type      SensorType     `gorm:"type:varchar(50);not null"`
+	Status    SensorStatus   `gorm:"type:varchar(50);not null"`
+	Unit      string         `gorm:"type:varchar(20)"`
+	Precision int            `gorm:"type:int"`
+	Location  string         `gorm:"type:varchar(255)"`
 	CreatedAt time.Time      `gorm:"autoCreateTime"`
 	UpdatedAt time.Time      `gorm:"autoUpdateTime"`
 	DeletedAt gorm.DeletedAt `gorm:"index"`
+	// MetaData  map[string]interface{} `gorm:"type:jsonb"`
+}
+
+func (s *Sensor) StampNew() {
+	s.ID = uuid.NewString()
+	s.CreatedAt = time.Now()
+	s.UpdatedAt = time.Now()
+}
+
+func (s *Sensor) StampUpdate() {
+	s.UpdatedAt = time.Now()
 }
