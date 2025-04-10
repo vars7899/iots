@@ -10,7 +10,7 @@ import (
 
 type UserRepository interface {
 	// Basic CRUD
-	Create(ctx context.Context, user *user.User) error                                 // ✅
+	Create(ctx context.Context, user *user.User) (*user.User, error)                   // ✅
 	GetByID(ctx context.Context, userID uuid.UUID) (*user.User, error)                 // ✅
 	Update(ctx context.Context, userID uuid.UUID, user *user.User) (*user.User, error) // ✅
 	Delete(ctx context.Context, userID uuid.UUID) error                                // ✅

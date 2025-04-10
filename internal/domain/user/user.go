@@ -13,7 +13,7 @@ type User struct {
 	ID          uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	Username    string         `gorm:"type:varchar(100);not null;uniqueIndex" json:"username"`
 	Email       string         `gorm:"type:varchar(100);not null;uniqueIndex" json:"email"`
-	Password    string         `gorm:"type:text;not null" json:"-"`
+	Password    string         `gorm:"type:text;not null" json:"password"`
 	PhoneNumber string         `gorm:"type:varchar(20)" json:"phone_number"`
 	Roles       []Role         `gorm:"many2many:user_roles;constraints:onUpdate:CASCADE,onDelete:CASCADE;" json:"roles"`
 	IsActive    bool           `gorm:"default:true" json:"is_active"`
@@ -25,7 +25,7 @@ type User struct {
 }
 
 func (u *User) SetPassword(raw string) error {
-	hashed, err := bcrypt.GenerateFromPassword([]byte(raw), bcrypt.MaxCost)
+	hashed, err := bcrypt.GenerateFromPassword([]byte(raw), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}

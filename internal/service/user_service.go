@@ -18,7 +18,7 @@ func NewUserService(r repository.UserRepository) *UserService {
 	return &UserService{name: "user", repo: r}
 }
 
-func (s *UserService) CreateUser(ctx context.Context, u *user.User) error {
+func (s *UserService) CreateUser(ctx context.Context, u *user.User) (*user.User, error) {
 	createUserError := func(err error) error {
 		return s.wrapError("create user", err)
 	}
@@ -26,21 +26,25 @@ func (s *UserService) CreateUser(ctx context.Context, u *user.User) error {
 	// check if the email is already taken
 	isAlreadyTaken, err := s.repo.ExistByEmail(ctx, u.Email)
 	if err != nil {
-		return createUserError(err)
+		return nil, createUserError(err)
 	}
 	if isAlreadyTaken {
-		return createUserError(user.ErrEmailAlreadyExists)
+		return nil, createUserError(user.ErrEmailAlreadyExists)
 	}
-	if err := s.repo.Create(ctx, u); err != nil {
-		return createUserError(err)
+	if err := u.SetPassword(u.Password); err != nil {
+		return nil, createUserError(err)
 	}
-	return nil
+	_newUser, err := s.repo.Create(ctx, u)
+	if err != nil {
+		return nil, createUserError(err)
+	}
+	return _newUser, nil
 }
 
-func (s *UserService) GetUser(ctx context.Context, userID uuid.UUID) (*user.User, error) {
+func (s *UserService) GetUserByID(ctx context.Context, userID uuid.UUID) (*user.User, error) {
 	userData, err := s.repo.GetByID(ctx, userID)
 	if err != nil {
-		return nil, s.wrapError("get user", err)
+		return nil, s.wrapError("get user by id", err)
 	}
 	return userData, nil
 }
@@ -58,6 +62,14 @@ func (s *UserService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 		return s.wrapError("delete user", err)
 	}
 	return nil
+}
+
+func (s *UserService) GetUser(ctx context.Context) ([]*user.User, error) {
+	userList, err := s.repo.List(ctx, user.UserFilter{})
+	if err != nil {
+		return nil, s.wrapError("get user", err)
+	}
+	return userList, nil
 }
 
 func (s *UserService) wrapError(action string, err error) error {

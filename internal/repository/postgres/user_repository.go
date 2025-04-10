@@ -37,15 +37,15 @@ func (r *UserRepositoryPostgres) GetByID(ctx context.Context, userID uuid.UUID) 
 	return &user, nil
 }
 
-func (r *UserRepositoryPostgres) Create(ctx context.Context, u *user.User) error {
-	if err := r.db.WithContext(ctx).Create(u).Error; err != nil {
+func (r *UserRepositoryPostgres) Create(ctx context.Context, u *user.User) (*user.User, error) {
+	if err := r.db.WithContext(ctx).Model(&user.User{}).Create(u).Error; err != nil {
 		if validatorutils.IsPgDuplicateKeyError(err) {
-			return repository.ErrDuplicateKey
+			return nil, repository.ErrDuplicateKey
 		}
 		r.log.Error("failed to create new user", zap.Any("user", u), zap.Error(err))
-		return repository.ErrInternal
+		return nil, repository.ErrInternal
 	}
-	return nil
+	return r.FindByEmail(ctx, u.Email)
 }
 
 func (r *UserRepositoryPostgres) Update(ctx context.Context, userID uuid.UUID, u *user.User) (*user.User, error) {
@@ -157,7 +157,7 @@ func (r *UserRepositoryPostgres) SetLastLogin(ctx context.Context, userID uuid.U
 
 func (r *UserRepositoryPostgres) ExistByEmail(ctx context.Context, email string) (bool, error) {
 	var count int64
-	result := r.db.WithContext(ctx).Where("email = ?", email).Count(&count)
+	result := r.db.WithContext(ctx).Model(&user.User{}).Where("email = ?", email).Count(&count)
 	if result.Error != nil {
 		r.log.Error("failed to check user exist by email", zap.String("user_email", email), zap.Error(result.Error))
 		return false, repository.ErrInternal

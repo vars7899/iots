@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/vars7899/iots/config"
@@ -10,10 +11,13 @@ import (
 	"github.com/vars7899/iots/internal/db"
 	"github.com/vars7899/iots/internal/repository/postgres"
 	"github.com/vars7899/iots/internal/service"
+	"github.com/vars7899/iots/internal/validatorz"
+	"github.com/vars7899/iots/pkg/auth/token"
 	"github.com/vars7899/iots/pkg/logger"
 )
 
 func main() {
+	validatorz.InitValidator()
 	logger.InitLogger(false)
 
 	postgresConfig, err := config.Load(".env.dev")
@@ -27,15 +31,24 @@ func main() {
 		log.Fatalf("database connection failed: %v", err)
 	}
 
+	if err := db.AutoMigrate(postgresDB); err != nil {
+		log.Fatalf("database migration failed: %v", err)
+	}
+
 	// Initialize repositories
 	sensorRepo := postgres.NewSensorRepositoryPostgres(postgresDB)
+	userRepo := postgres.NewUserRepositoryPostgres(postgresDB)
 
 	// Initialize services
 	sensorService := service.NewSensorService(sensorRepo)
+	userService := service.NewUserService(userRepo)
+	tokenService := token.NewJwtTokenService(os.Getenv("JWT_ACCESS_SECRET"), os.Getenv("JWT_REFRESH_SECRET"), 15*time.Hour, 24*7*time.Hour)
 
 	// Create dependency injection container
 	deps := api_v1.APIDependencies{
 		SensorService: sensorService,
+		UserService:   userService,
+		TokenService:  tokenService,
 	}
 
 	// Initialize Echo
