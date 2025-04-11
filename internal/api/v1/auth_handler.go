@@ -3,12 +3,11 @@ package v1
 import (
 	"context"
 	"net/http"
-	"os"
-	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/vars7899/iots/config"
 	"github.com/vars7899/iots/internal/api/v1/dto"
 	"github.com/vars7899/iots/internal/domain/user"
 	"github.com/vars7899/iots/internal/middleware"
@@ -180,7 +179,7 @@ func (h *AuthHandler) Logout(c echo.Context) error {
 		HttpOnly: true,
 		Expires:  time.Unix(0, 0),
 		MaxAge:   -1,
-		Secure:   h.isUnderProduction(),
+		Secure:   config.IsUnderProduction(),
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
 	})
@@ -274,7 +273,7 @@ func (h *AuthHandler) bindRefreshTokenCookie(c echo.Context, t string, ttl time.
 		Value:    t,
 		HttpOnly: true,
 		Expires:  time.Now().Add(ttl),
-		Secure:   h.isUnderProduction(), // todo: turn to true under production
+		Secure:   config.IsUnderProduction(), // todo: turn to true under production
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
 	})
@@ -298,14 +297,4 @@ func (h *AuthHandler) generateToken(u *user.User) (accessToken *string, refreshT
 		return nil, nil, err
 	}
 	return &genAccessToken, &genRefreshToken, nil
-}
-
-func (h *AuthHandler) isUnderProduction() bool {
-	isProductionEnv := os.Getenv("IS_PRODUCTION")
-	isProduction, err := strconv.ParseBool(isProductionEnv)
-	if err != nil {
-		isProduction = false
-		h.log.Error("failed to parse IS_PRODUCTION from .env")
-	}
-	return isProduction
 }

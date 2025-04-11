@@ -1,6 +1,9 @@
 package config
 
 import (
+	"os"
+	"strconv"
+
 	"github.com/caarlos0/env/v11"
 	"github.com/joho/godotenv"
 	"github.com/vars7899/iots/pkg/logger"
@@ -26,4 +29,14 @@ func Load(filenames ...string) (*PostgresConfig, error) {
 
 	logger.Lgr.Info("Configuration loaded successfully")
 	return &cfg, nil
+}
+
+func IsUnderProduction() bool {
+	isProductionEnv := os.Getenv("IS_PRODUCTION")
+	isProduction, err := strconv.ParseBool(isProductionEnv)
+	if err != nil {
+		isProduction = false
+		logger.Lgr.Error("failed to parse IS_PRODUCTION from .env")
+	}
+	return isProduction
 }
