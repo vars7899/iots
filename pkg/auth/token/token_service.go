@@ -13,6 +13,7 @@ type TokenService interface {
 	ValidateAccessToken(tokenStr string) (*jwt.Token, error)
 	ValidateRefreshToken(tokenStr string) (*jwt.Token, error)
 	ParseAccessToken(tokenStr string) (*AccessTokenClaims, error)
+	ParseRefreshToken(tokenStr string) (*RefreshTokenClaims, error)
 	GetAccessTTL() time.Duration
 	GetRefreshTTL() time.Duration
 }

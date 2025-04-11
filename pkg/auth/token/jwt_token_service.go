@@ -24,6 +24,12 @@ type AccessTokenClaims struct {
 	jwt.RegisteredClaims // includes exp, iat, iss, etc.
 }
 
+type RefreshTokenClaims struct {
+	UserID string `json:"sub"`
+
+	jwt.RegisteredClaims // includes exp, iat, iss, etc.
+}
+
 func NewJwtTokenService(accessSecret, refreshSecret string, accessTTL, refreshTTL time.Duration) TokenService {
 	return &JwtTokenService{
 		name:          "token.jwt_token_service",
@@ -86,6 +92,22 @@ func (j *JwtTokenService) ParseAccessToken(tokenStr string) (*AccessTokenClaims,
 	claims, ok := token.Claims.(*AccessTokenClaims)
 	if !ok || !token.Valid {
 		return nil, j.wrapError("parse access token", errors.New("invalid or expired token"))
+	}
+
+	return claims, nil
+}
+
+func (j *JwtTokenService) ParseRefreshToken(tokenStr string) (*RefreshTokenClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenStr, &RefreshTokenClaims{}, func(t *jwt.Token) (interface{}, error) {
+		return []byte(j.refreshSecret), nil
+	})
+	if err != nil {
+		return nil, j.wrapError("parse refresh token", err)
+	}
+
+	claims, ok := token.Claims.(*RefreshTokenClaims)
+	if !ok || !token.Valid {
+		return nil, j.wrapError("parse refresh token", errors.New("invalid or expired token"))
 	}
 
 	return claims, nil

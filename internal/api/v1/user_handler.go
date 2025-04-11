@@ -20,6 +20,7 @@ func (h *UserHandler) RegisterRoutes(e *echo.Group) {
 	e.GET("", h.GetUsers)
 }
 
+// TODO: dismiss this route for testing only
 func (h *UserHandler) GetUsers(c echo.Context) error {
 	_userList, err := h.UserService.GetUser(c.Request().Context())
 	if err != nil {
