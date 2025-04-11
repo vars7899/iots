@@ -14,7 +14,7 @@ type User struct {
 	Username    string         `gorm:"type:varchar(100);not null;uniqueIndex" json:"username"`
 	Email       string         `gorm:"type:varchar(100);not null;uniqueIndex" json:"email"`
 	Password    string         `gorm:"type:text;not null" json:"password"`
-	PhoneNumber string         `gorm:"type:varchar(20)" json:"phone_number"`
+	PhoneNumber string         `gorm:"type:varchar(20);not null;uniqueIndex" json:"phone_number"`
 	Roles       []Role         `gorm:"many2many:user_roles;constraints:onUpdate:CASCADE,onDelete:CASCADE;" json:"roles"`
 	IsActive    bool           `gorm:"default:true" json:"is_active"`
 	LastLogin   *time.Time     `json:"last_login"`
@@ -22,6 +22,14 @@ type User struct {
 	UpdatedAt   time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 	CreatedBy   *uuid.UUID     `gorm:"type:uuid" json:"created_by"`
+}
+
+// TODO: implement public view
+type UserPublicView struct {
+}
+
+func (u *User) PublicView() {
+
 }
 
 func (u *User) SetPassword(raw string) error {

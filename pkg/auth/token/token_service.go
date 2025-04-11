@@ -12,5 +12,7 @@ type TokenService interface {
 	GenerateRefreshToken(userID uuid.UUID) (string, error)
 	ValidateAccessToken(tokenStr string) (*jwt.Token, error)
 	ValidateRefreshToken(tokenStr string) (*jwt.Token, error)
+	ParseAccessToken(tokenStr string) (*AccessTokenClaims, error)
 	GetAccessTTL() time.Duration
+	GetRefreshTTL() time.Duration
 }

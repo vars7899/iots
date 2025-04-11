@@ -146,3 +146,10 @@ Nice, glad it's working now! 🎉 Now that your sensor API core is solid (CRUD, 
 ---
 
 Want to tackle any of these now? I can help scaffold models, endpoints, or DB migrations. Let me know what direction you want to take next 🚀
+
+
+### Authorization
+[] Login endpoint
+[] Register endpoint
+[] Logout endpoint
+  - [] invalidate & blacklist the authorization bearer token

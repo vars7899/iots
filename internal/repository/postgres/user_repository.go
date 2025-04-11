@@ -130,6 +130,18 @@ func (r *UserRepositoryPostgres) FindByUserName(ctx context.Context, userName st
 	return &u, nil
 }
 
+func (r *UserRepositoryPostgres) FindByPhoneNumber(ctx context.Context, phoneNumber string) (*user.User, error) {
+	var u user.User
+	if err := r.db.WithContext(ctx).Where("phone_number = ?", phoneNumber).First(&u).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, repository.ErrNotFound
+		}
+		r.log.Error("failed to find user by username", zap.String("user_phone_number", phoneNumber), zap.Error(err))
+		return nil, repository.ErrInternal
+	}
+	return &u, nil
+}
+
 func (r *UserRepositoryPostgres) FindByRoles(ctx context.Context, userID uuid.UUID) (*user.User, error) {
 	var u user.User
 	if err := r.db.WithContext(ctx).Preload("Roles.Permissions").First(&u, "id = ?", userID).Error; err != nil {

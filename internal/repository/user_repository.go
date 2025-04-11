@@ -18,6 +18,7 @@ type UserRepository interface {
 	Restore(ctx context.Context, userID uuid.UUID) error                               // ✅
 	FindByEmail(ctx context.Context, email string) (*user.User, error)                 // ✅
 	FindByUserName(ctx context.Context, userName string) (*user.User, error)           // ✅
+	FindByPhoneNumber(ctx context.Context, userName string) (*user.User, error)        // ✅
 	FindByRoles(ctx context.Context, userID uuid.UUID) (*user.User, error)             // ✅
 	SetLastLogin(ctx context.Context, userID uuid.UUID, timestamp time.Time) error     // ✅
 	ExistByEmail(ctx context.Context, email string) (bool, error)                      // ✅

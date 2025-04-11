@@ -6,6 +6,15 @@ import (
 	"gorm.io/gorm"
 )
 
+var DB_Tables = []interface{}{
+	&user.User{},
+	&user.Role{},
+	&user.Permission{},
+	&user.UserRole{},
+	&user.RolePermission{},
+	&sensor.Sensor{},
+}
+
 func AutoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(&sensor.Sensor{}, &user.User{})
+	return db.AutoMigrate(DB_Tables...)
 }

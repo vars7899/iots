@@ -11,7 +11,7 @@ var (
 	Lgr *zap.Logger
 )
 
-func InitLogger(onProductionMode bool) {
+func InitLogger(onProductionMode bool) *zap.Logger {
 	var cfg zap.Config
 
 	if onProductionMode {
@@ -26,4 +26,5 @@ func InitLogger(onProductionMode bool) {
 		panic("failed to build zap logger: " + err.Error())
 	}
 	Lgr = _logger
+	return Lgr
 }

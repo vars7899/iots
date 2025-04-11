@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/vars7899/iots/internal/domain/user"
@@ -70,6 +72,33 @@ func (s *UserService) GetUser(ctx context.Context) ([]*user.User, error) {
 		return nil, s.wrapError("get user", err)
 	}
 	return userList, nil
+}
+
+func (s *UserService) SetLastLogin(ctx context.Context, userID uuid.UUID) error {
+	if err := s.repo.SetLastLogin(ctx, userID, time.Now()); err != nil {
+		return s.wrapError("set last login", err)
+	}
+	return nil
+}
+
+type LoginIdentifier struct {
+	Email       string
+	Username    string
+	PhoneNumber string
+}
+
+// UserService.go
+func (s *UserService) FindByLoginIdentifier(ctx context.Context, identifiers LoginIdentifier) (*user.User, error) {
+	if identifiers.Email != "" {
+		return s.repo.FindByEmail(ctx, identifiers.Email)
+	}
+	if identifiers.PhoneNumber != "" {
+		return s.repo.FindByPhoneNumber(ctx, identifiers.PhoneNumber)
+	}
+	if identifiers.Username != "" {
+		return s.repo.FindByUserName(ctx, identifiers.Username)
+	}
+	return nil, s.wrapError("find by login identifier", errors.New("no login identifier provided"))
 }
 
 func (s *UserService) wrapError(action string, err error) error {

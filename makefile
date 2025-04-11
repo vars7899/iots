@@ -1,6 +1,7 @@
 APP_NAME := iots
 CMD_DIR := ./cmd/api
 SEED_DIR := ./cmd/seeder
+RESET_DIR := ./cmd/reset
 
 .PHONY: run build tidy test start sleep seed
 
@@ -22,5 +23,7 @@ sleep:
 	sleep 1
 seed:
 	go run $(SEED_DIR)/main.go
+reset:
+	go run $(RESET_DIR)/main.go
 
 start: docker-up sleep run

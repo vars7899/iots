@@ -23,7 +23,9 @@ func (h *UserHandler) RegisterRoutes(e *echo.Group) {
 func (h *UserHandler) GetUsers(c echo.Context) error {
 	_userList, err := h.UserService.GetUser(c.Request().Context())
 	if err != nil {
-		return response.Error(c, http.StatusBadRequest, err.Error())
+		return response.ErrBadRequest.WithDetails(echo.Map{
+			"error": err,
+		})
 	}
 	return response.JSON(c, http.StatusOK, echo.Map{
 		"message": "successfully retrieved user list",
