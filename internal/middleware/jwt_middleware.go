@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
+	"github.com/vars7899/iots/pkg/apperror"
 	"github.com/vars7899/iots/pkg/auth/token"
-	"github.com/vars7899/iots/pkg/response"
 )
 
 func JwtTokenMiddleware(tokenService token.TokenService) echo.MiddlewareFunc {
@@ -14,7 +14,7 @@ func JwtTokenMiddleware(tokenService token.TokenService) echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			authorizationHeader := c.Request().Header.Get(echo.HeaderAuthorization)
 			if authorizationHeader == "" || !strings.HasPrefix(authorizationHeader, "Bearer") {
-				return response.ErrUnauthorized.WithDetails(echo.Map{
+				return apperror.ErrUnauthorized.WithDetails(echo.Map{
 					"error": "missing/invalid authorization token",
 				})
 			}
@@ -22,7 +22,7 @@ func JwtTokenMiddleware(tokenService token.TokenService) echo.MiddlewareFunc {
 
 			_claims, err := tokenService.ParseAccessToken(tokenString)
 			if err != nil {
-				return response.ErrUnauthorized.WithDetails(echo.Map{
+				return apperror.ErrUnauthorized.WithDetails(echo.Map{
 					"error": "invalid/expired authorization token",
 				})
 			}

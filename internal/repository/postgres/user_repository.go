@@ -39,7 +39,7 @@ func (r *UserRepositoryPostgres) GetByID(ctx context.Context, userID uuid.UUID) 
 
 func (r *UserRepositoryPostgres) Create(ctx context.Context, u *user.User) (*user.User, error) {
 	if err := r.db.WithContext(ctx).Model(&user.User{}).Create(u).Error; err != nil {
-		if validatorutils.IsPgDuplicateKeyError(err) {
+		if pgErr := validatorutils.IsPgDuplicateKeyError(err); pgErr != nil {
 			return nil, repository.ErrDuplicateKey
 		}
 		r.log.Error("failed to create new user", zap.Any("user", u), zap.Error(err))

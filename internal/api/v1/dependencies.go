@@ -7,6 +7,7 @@ import (
 
 type APIDependencies struct {
 	SensorService *service.SensorService
+	DeviceService *service.DeviceService
 	UserService   *service.UserService
 	TokenService  token.TokenService
 }

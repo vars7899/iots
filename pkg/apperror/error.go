@@ -1,4 +1,4 @@
-package response
+package apperror
 
 import (
 	"encoding/json"
@@ -50,11 +50,17 @@ const (
 	ErrCodeUpdateLogin  ErrorCode = "ERR-4003"
 
 	// Database errors (5xxx)
-	ErrCodeDBQuery   ErrorCode = "ERR-5000"
-	ErrCodeDBInsert  ErrorCode = "ERR-5001"
-	ErrCodeDBUpdate  ErrorCode = "ERR-5002"
-	ErrCodeDBDelete  ErrorCode = "ERR-5003"
-	ErrCodeDBConnect ErrorCode = "ERR-5004"
+	ErrCodeDBQuery      ErrorCode = "ERR-5000"
+	ErrCodeDBInsert     ErrorCode = "ERR-5001"
+	ErrCodeDBUpdate     ErrorCode = "ERR-5002"
+	ErrCodeDBDelete     ErrorCode = "ERR-5003"
+	ErrCodeDBConnect    ErrorCode = "ERR-5004"
+	ErrCodeDuplicateKey ErrorCode = "ERR-5005"
+
+	// Timeout errors (6xxx)
+	ErrCodeTimeout ErrorCode = "ERR-6000"
+
+	ErrCodeContextCancelled ErrorCode = "ERR-7000"
 )
 
 // CodeMessages maps error codes to default messages (can be overridden in i18n files)
@@ -85,11 +91,17 @@ var CodeMessages = map[ErrorCode]string{
 	ErrCodeUpdateLogin:  "Could not update user session",
 
 	// Database errors
-	ErrCodeDBQuery:   "Database query failed",
-	ErrCodeDBInsert:  "Failed to insert into database",
-	ErrCodeDBUpdate:  "Failed to update database",
-	ErrCodeDBDelete:  "Failed to delete from database",
-	ErrCodeDBConnect: "Failed to connect to database",
+	ErrCodeDBQuery:      "Database query failed",
+	ErrCodeDBInsert:     "Failed to insert into database",
+	ErrCodeDBUpdate:     "Failed to update database",
+	ErrCodeDBDelete:     "Failed to delete from database",
+	ErrCodeDBConnect:    "Failed to connect to database",
+	ErrCodeDuplicateKey: "Duplicate key value violates unique constraint",
+
+	// Timeout errors
+	ErrCodeTimeout: "Request deadline exceeded",
+
+	ErrCodeContextCancelled: "operation ended due to context cancellation",
 }
 
 // HTTP status mapping for error codes
@@ -120,11 +132,12 @@ var CodeStatus = map[ErrorCode]int{
 	ErrCodeUpdateLogin:  StatusServiceUnavailable,
 
 	// Database errors
-	ErrCodeDBQuery:   StatusInternalServerError,
-	ErrCodeDBInsert:  StatusInternalServerError,
-	ErrCodeDBUpdate:  StatusInternalServerError,
-	ErrCodeDBDelete:  StatusInternalServerError,
-	ErrCodeDBConnect: StatusServiceUnavailable,
+	ErrCodeDBQuery:      StatusInternalServerError,
+	ErrCodeDBInsert:     StatusInternalServerError,
+	ErrCodeDBUpdate:     StatusInternalServerError,
+	ErrCodeDBDelete:     StatusInternalServerError,
+	ErrCodeDBConnect:    StatusServiceUnavailable,
+	ErrCodeDuplicateKey: StatusConflict,
 }
 
 // AppError represents a standardized error for the application
@@ -147,6 +160,13 @@ func (e *AppError) Error() string {
 		return fmt.Sprintf("%s: %s", e.Message, e.originalErr.Error())
 	}
 	return e.Message
+}
+
+func (e *AppError) OriginalErr() error {
+	return e.originalErr
+}
+func (e *AppError) InternalOnly() bool {
+	return e.internalOnly
 }
 
 // Unwrap implements error unwrapping
@@ -178,6 +198,12 @@ func (e *AppError) WithDetails(details interface{}) *AppError {
 func (e *AppError) WithMessage(message string) *AppError {
 	clone := e.clone()
 	clone.Message = message
+	return clone
+}
+
+func (e *AppError) WithMessagef(format string, args ...interface{}) *AppError {
+	clone := e.clone()
+	clone.Message = fmt.Sprintf(format, args...)
 	return clone
 }
 
@@ -265,6 +291,7 @@ func New(code ErrorCode) *AppError {
 	if !exists {
 		message = "An error occurred"
 	}
+	fmt.Println(code, status, exists, message)
 
 	return &AppError{
 		Code:      code,
@@ -346,9 +373,16 @@ var (
 	ErrUpdateLogin  = New(ErrCodeUpdateLogin)
 
 	// DB errors
-	ErrDBQuery   = New(ErrCodeDBQuery)
-	ErrDBInsert  = New(ErrCodeDBInsert)
-	ErrDBUpdate  = New(ErrCodeDBUpdate)
-	ErrDBDelete  = New(ErrCodeDBDelete)
-	ErrDBConnect = New(ErrCodeDBConnect)
+	ErrDBQuery      = New(ErrCodeDBQuery)
+	ErrDBInsert     = New(ErrCodeDBInsert)
+	ErrDBUpdate     = New(ErrCodeDBUpdate)
+	ErrDBDelete     = New(ErrCodeDBDelete)
+	ErrDBConnect    = New(ErrCodeDBConnect)
+	ErrDuplicateKey = New(ErrCodeDuplicateKey)
+
+	// Timeout errors
+	ErrTimeout = New(ErrCodeTimeout)
+
+	// Context errors
+	ErrContextCancelled = New(ErrCodeContextCancelled)
 )

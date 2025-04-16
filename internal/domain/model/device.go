@@ -1,40 +1,37 @@
-package device
+package model
 
 import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
-	"github.com/vars7899/iots/internal/domain/sensor"
-	"gorm.io/gorm"
 )
 
 type DeviceID string
 
 type Device struct {
-	ID              uuid.UUID       `gorm:"type:uuid;primaryKey;default:gen_random_uuid();" json:"id"`
-	Name            string          `gorm:"type:varchar(255);not null;uniqueIndex" json:"name"`
-	Description     string          `gorm:"type:text;not null" json:"description"`
-	Manufacturer    string          `gorm:"type:varchar(255);not null;index" json:"manufacturer"`
-	ModelNumber     string          `gorm:"type:varchar(255);not null" json:"model_number"`
-	SerialNumber    string          `gorm:"type:varchar(255);not null" json:"serial_number"`
-	FirmwareVersion string          `gorm:"type:varchar(20);not null" json:"firmware_version"`
-	Location        DeviceLocation  `gorm:"embedded" json:"location"`
-	IPAddress       string          `gorm:"type:varchar(45);index" json:"ip_address"`
-	MACAddress      string          `gorm:"type:varchar(17);uniqueIndex" json:"mac_address"`
-	IsOnline        bool            `gorm:"default:false" json:"is_online"`
-	LastConnected   *time.Time      `json:"last_connected"`
-	ConnectionType  string          `gorm:"type:varchar(20)" json:"connection_type"`
-	CreatedAt       time.Time       `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt       time.Time       `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt       gorm.DeletedAt  `gorm:"index" json:"-"`
-	Sensors         []sensor.Sensor `gorm:"foreignKey:DeviceID" json:"sensors"`
-	TelemetryConfig TelemetryConfig `gorm:"embedded" json:"telemetry_config"`
-	BroadcastConfig BroadcastConfig `gorm:"embedded" json:"broadcast_config"`
-	Capabilities    pq.StringArray  `gorm:"type:text[] json:"capabilities""` // array of capability identifiers
-	Tags            pq.StringArray  `gorm:"type:text[] json:"tags""`
-	Status          string          `gorm:"type:varchar(20),default:'inactive'" json:"status"` // active, inactive, maintenance, etc.
-	Metadata        JSON            `gorm:"type:jsonb" json:"metadata"`
+	ID              uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid();" json:"id"`
+	Name            string    `gorm:"type:varchar(255);not null;uniqueIndex" json:"name"`
+	Description     string    `gorm:"type:text;not null" json:"description"`
+	Manufacturer    string    `gorm:"type:varchar(255);not null;index" json:"manufacturer"`
+	ModelNumber     string    `gorm:"type:varchar(255);not null" json:"model_number"`
+	SerialNumber    string    `gorm:"type:varchar(255);not null" json:"serial_number"`
+	FirmwareVersion string    `gorm:"type:varchar(20);not null" json:"firmware_version"`
+	IPAddress       string    `gorm:"type:varchar(45);index" json:"ip_address"`
+	MACAddress      string    `gorm:"type:varchar(17);uniqueIndex" json:"mac_address"`
+	ConnectionType  string    `gorm:"type:varchar(20)" json:"connection_type"`
+	// Location        DeviceLocation `gorm:"embedded" json:"location"`
+	// IsOnline        bool            `gorm:"default:false" json:"is_online"`
+	// LastConnected   *time.Time      `json:"last_connected"`
+	// CreatedAt       time.Time       `gorm:"autoCreateTime" json:"created_at"`
+	// UpdatedAt       time.Time       `gorm:"autoUpdateTime" json:"updated_at"`
+	// DeletedAt       gorm.DeletedAt  `gorm:"index" json:"-"`
+	// Sensors         []sensor.Sensor `gorm:"foreignKey:DeviceID" json:"sensors"`
+	// TelemetryConfig TelemetryConfig `gorm:"embedded" json:"telemetry_config"`
+	// BroadcastConfig BroadcastConfig `gorm:"embedded" json:"broadcast_config"`
+	// Capabilities    pq.StringArray  `gorm:"type:text[] json:"capabilities""` // array of capability identifiers
+	// Tags            pq.StringArray  `gorm:"type:text[] json:"tags""`
+	// Status          string          `gorm:"type:varchar(20),default:'inactive'" json:"status"` // active, inactive, maintenance, etc.
+	// Metadata        JSON            `gorm:"type:jsonb" json:"metadata"`
 }
 
 type DeviceLocation struct {
@@ -95,3 +92,30 @@ type DeviceEvent struct {
 }
 
 type JSON map[string]interface{}
+
+type DeviceStatus string
+
+var (
+	StatusActive   DeviceStatus = "active"
+	StatusInactive DeviceStatus = "inactive"
+	StatusPending  DeviceStatus = "pending"
+	StatusError    DeviceStatus = "error"
+)
+
+func (s DeviceStatus) String() string {
+	return string(s)
+}
+
+func IsValidDeviceStatus(s string) bool {
+	switch DeviceStatus(s) {
+	case StatusActive, StatusInactive, StatusPending, StatusError:
+		return true
+	default:
+		return false
+	}
+}
+
+type DeviceUpdate struct {
+	ID      uuid.UUID
+	Updates interface{}
+}

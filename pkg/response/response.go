@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/vars7899/iots/pkg/apperror"
 	"go.uber.org/zap"
 )
 
@@ -60,76 +61,76 @@ func Error(c echo.Context, err error) error {
 	logger := getLogger(c)
 
 	// Convert to AppError if needed
-	appErr := FromError(err)
-	if appErr == nil {
+	appError := apperror.FromError(err)
+	if appError == nil {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	// Add request path and trace ID if not already set
-	if appErr.Path == "" {
-		appErr = appErr.WithPath(c.Request().URL.Path)
+	if appError.Path == "" {
+		appError = appError.WithPath(c.Request().URL.Path)
 	}
 
 	traceID := getTraceID(c)
-	if appErr.TraceID == "" && traceID != "" {
-		appErr = appErr.WithTraceID(traceID)
+	if appError.TraceID == "" && traceID != "" {
+		appError = appError.WithTraceID(traceID)
 	}
 
-	msg, ok := CodeMessages[appErr.Code]
+	msg, ok := apperror.CodeMessages[appError.Code]
 	if !ok {
 		msg = "oops!!! something went wrong"
 	}
-	appErr = appErr.WithMessage(msg)
+	appError = appError.WithMessage(msg)
 
 	// Log the error with details for debugging
 	logFields := []zap.Field{
-		zap.String("error_code", string(appErr.Code)),
-		zap.String("path", appErr.Path),
-		zap.Int("status", appErr.Status()),
+		zap.String("error_code", string(appError.Code)),
+		zap.String("path", appError.Path),
+		zap.Int("status", appError.Status()),
 	}
 
-	if appErr.TraceID != "" {
-		logFields = append(logFields, zap.String("trace_id", appErr.TraceID))
+	if appError.TraceID != "" {
+		logFields = append(logFields, zap.String("trace_id", appError.TraceID))
 	}
 
-	if appErr.originalErr != nil {
-		logFields = append(logFields, zap.Error(appErr.originalErr))
+	if appError.OriginalErr() != nil {
+		logFields = append(logFields, zap.Error(appError.OriginalErr()))
 	}
 
-	if appErr.Stack != "" {
-		logFields = append(logFields, zap.String("stack", appErr.Stack))
+	if appError.Stack != "" {
+		logFields = append(logFields, zap.String("stack", appError.Stack))
 	}
 
-	if appErr.Status() >= 500 {
+	if appError.Status() >= 500 {
 		logger.Error("Internal server error", logFields...)
 	} else {
 		logger.Info("Client error", logFields...)
 	}
 
 	// Don't expose internal details to client for security
-	if appErr.internalOnly {
-		return c.JSON(appErr.Status(), ErrorResponse{
+	if appError.InternalOnly() {
+		return c.JSON(appError.Status(), ErrorResponse{
 			Response: Response{
 				Success:   false,
-				Timestamp: appErr.Timestamp,
-				TraceID:   appErr.TraceID,
+				Timestamp: appError.Timestamp,
+				TraceID:   appError.TraceID,
 			},
-			StatusCode: appErr.Status(),
-			ErrorCode:  string(appErr.Code),
+			StatusCode: appError.Status(),
+			ErrorCode:  string(appError.Code),
 			Message:    "An error occurred", // Generic message for internal errors
 		})
 	}
 
-	return c.JSON(appErr.Status(), ErrorResponse{
+	return c.JSON(appError.Status(), ErrorResponse{
 		Response: Response{
 			Success:   false,
-			Timestamp: appErr.Timestamp,
-			TraceID:   appErr.TraceID,
+			Timestamp: appError.Timestamp,
+			TraceID:   appError.TraceID,
 		},
-		StatusCode: appErr.Status(),
-		ErrorCode:  string(appErr.Code),
-		Message:    appErr.Message,
-		Details:    appErr.Details,
+		StatusCode: appError.Status(),
+		ErrorCode:  string(appError.Code),
+		Message:    appError.Message,
+		Details:    appError.Details,
 	})
 }
 

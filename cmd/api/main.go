@@ -38,10 +38,12 @@ func main() {
 	// Initialize repositories
 	sensorRepo := postgres.NewSensorRepositoryPostgres(postgresDB)
 	userRepo := postgres.NewUserRepositoryPostgres(postgresDB)
+	deviceRepo := postgres.NewDeviceRepositoryPostgres(postgresDB)
 
 	// Initialize services
 	sensorService := service.NewSensorService(sensorRepo)
 	userService := service.NewUserService(userRepo)
+	deviceService := service.NewDeviceService(deviceRepo, logger.Lgr)
 	tokenService := token.NewJwtTokenService(os.Getenv("JWT_ACCESS_SECRET"), os.Getenv("JWT_REFRESH_SECRET"), 15*time.Hour, 24*7*time.Hour)
 
 	// Create dependency injection container
@@ -49,13 +51,14 @@ func main() {
 		SensorService: sensorService,
 		UserService:   userService,
 		TokenService:  tokenService,
+		DeviceService: deviceService,
 	}
 
 	// Initialize Echo
 	e := echo.New()
 
 	// Register routes with DIs
-	api_v1.RegisterRoutes(e, deps)
+	api_v1.RegisterRoutes(e, deps, logger.Lgr)
 
 	// Start server
 	port := os.Getenv("PORT")

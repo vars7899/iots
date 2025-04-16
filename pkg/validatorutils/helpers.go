@@ -41,10 +41,12 @@ func IsValidUUID(id string) bool {
 	return err == nil
 }
 
-func IsPgDuplicateKeyError(err error) bool {
+func IsPgDuplicateKeyError(err error) *pgconn.PgError {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
-		return pgErr.Code == "23505" // Unique violation code
+		if pgErr.Code == "23505" {
+			return pgErr // Unique violation code
+		}
 	}
-	return false
+	return nil
 }

@@ -20,7 +20,7 @@ func NewSensorRepositoryPostgres(db *gorm.DB) repository.SensorRepository {
 
 func (r SensorRepositoryPostgres) Create(ctx context.Context, s *sensor.Sensor) error {
 	if err := r.db.WithContext(ctx).Create(s).Error; err != nil {
-		if validatorutils.IsPgDuplicateKeyError(err) {
+		if pgErr := validatorutils.IsPgDuplicateKeyError(err); pgErr != nil {
 			return repository.ErrDuplicateKey
 		}
 		return fmt.Errorf("failed to create sensor: %w", err)

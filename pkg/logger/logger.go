@@ -28,3 +28,11 @@ func InitLogger(onProductionMode bool) *zap.Logger {
 	Lgr = _logger
 	return Lgr
 }
+
+func NewNamedZapLogger(baseLogger *zap.Logger, withName string) *zap.Logger {
+	if baseLogger == nil {
+		baseLogger = zap.NewNop()
+	}
+	baseLogger.Named(withName)
+	return baseLogger
+}

@@ -36,30 +36,30 @@ func ErrorHandler(logger *zap.Logger) echo.MiddlewareFunc {
 	}
 }
 
-// Recovery returns middleware that recovers from panics
-func Recovery(logger *zap.Logger) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			defer func() {
-				if r := recover(); r != nil {
-					err, ok := r.(error)
-					if !ok {
-						err = response.Errorf(response.ErrCodeInternal, "panic: %v", r)
-					}
+// // Recovery returns middleware that recovers from panics
+// func Recovery(logger *zap.Logger) echo.MiddlewareFunc {
+// 	return func(next echo.HandlerFunc) echo.HandlerFunc {
+// 		return func(c echo.Context) error {
+// 			defer func() {
+// 				if r := recover(); r != nil {
+// 					err, ok := r.(error)
+// 					if !ok {
+// 						err = response.Errorf(response.ErrCodeInternal, "panic: %v", r)
+// 					}
 
-					// Log the panic
-					stackTrace := response.New(response.ErrCodeInternal).Stack
-					logger.Error("Panic recovered",
-						zap.Error(err),
-						zap.String("stack", stackTrace),
-						zap.String("path", c.Request().URL.Path),
-						zap.String("method", c.Request().Method),
-					)
+// 					// Log the panic
+// 					stackTrace := response.New(response.ErrCodeInternal).Stack
+// 					logger.Error("Panic recovered",
+// 						zap.Error(err),
+// 						zap.String("stack", stackTrace),
+// 						zap.String("path", c.Request().URL.Path),
+// 						zap.String("method", c.Request().Method),
+// 					)
 
-					response.Error(c, response.ErrInternal.Wrap(err))
-				}
-			}()
-			return next(c)
-		}
-	}
-}
+// 					response.Error(c, response.ErrInternal.Wrap(err))
+// 				}
+// 			}()
+// 			return next(c)
+// 		}
+// 	}
+// }

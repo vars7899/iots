@@ -7,7 +7,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/vars7899/iots/config"
-	"github.com/vars7899/iots/pkg/response"
+	"github.com/vars7899/iots/pkg/apperror"
 )
 
 const (
@@ -41,7 +41,7 @@ func SetCSRFCookie(c echo.Context, token string) {
 func VerifyCSRFToken(c echo.Context) error {
 	cookie, err := c.Cookie(CSRFTokenCookie)
 	if err != nil {
-		return response.ErrBadRequest.WithDetails(echo.Map{
+		return apperror.ErrBadRequest.WithDetails(echo.Map{
 			"error": "CSRF token not found",
 		})
 	}
@@ -52,13 +52,13 @@ func VerifyCSRFToken(c echo.Context) error {
 	}
 
 	if requestToken == "" {
-		return response.ErrBadRequest.WithDetails(echo.Map{
+		return apperror.ErrBadRequest.WithDetails(echo.Map{
 			"error": "CSRF token not provided",
 		})
 	}
 
 	if cookie.Value != requestToken {
-		return response.ErrForbidden.WithDetails(echo.Map{
+		return apperror.ErrForbidden.WithDetails(echo.Map{
 			"error": "CSRF token mismatch",
 		})
 	}
