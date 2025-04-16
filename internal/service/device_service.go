@@ -32,10 +32,10 @@ func (s *DeviceService) CreateDevice(ctx context.Context, d *model.Device) (*mod
 func (s *DeviceService) GetDeviceByID(ctx context.Context, deviceID uuid.UUID) (*model.Device, error) {
 	deviceExist, err := s.repo.GetByID(ctx, deviceID)
 	if err != nil {
-		return nil, ServiceError(err, apperror.ErrDBQuery)
+		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, fmt.Sprintf("failed to retrieve device with ID %s", deviceID))
 	}
 	if deviceExist == nil {
-		return nil, ServiceError(apperror.ErrNotFound, fmt.Sprintf("failed to find device: no device found with id: %s", deviceID))
+		return nil, apperror.ErrNotFound.WithMessagef("device with ID %s not found", deviceID)
 	}
 	return deviceExist, nil
 }

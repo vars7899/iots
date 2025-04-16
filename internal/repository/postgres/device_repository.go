@@ -44,10 +44,9 @@ func (r *DeviceRepositoryPostgres) Create(ctx context.Context, deviceData *model
 }
 
 func (r *DeviceRepositoryPostgres) GetByID(ctx context.Context, deviceID uuid.UUID) (*model.Device, error) {
-	op := "GetByID"
 	var d model.Device
 	if err := r.db.WithContext(ctx).Where("id = ?", deviceID).First(&d).Error; err != nil {
-		return nil, repository.HandleRepoError(op, err, apperror.ErrDBQuery, r.log)
+		return nil, apperror.HandleDBError(err)
 	}
 	return &d, nil
 }

@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -30,6 +31,7 @@ func NewDeviceHandler(dep APIDependencies, baseLogger *zap.Logger) *DeviceHandle
 
 func (h *DeviceHandler) RegisterRoutes(e *echo.Group) {
 	e.POST("", h.CreateNewDevice)
+	e.GET("/:id", h.GetDeviceByID)
 }
 
 func (h *DeviceHandler) CreateNewDevice(c echo.Context) error {
@@ -54,7 +56,6 @@ func (h *DeviceHandler) CreateNewDevice(c echo.Context) error {
 			"details": err.Error(),
 		}).Wrap(err)
 	}
-
 	return response.JSON(c, int(http.StatusCreated), echo.Map{
 		"message": "device created successfully",
 		"device":  deviceData,
@@ -63,23 +64,21 @@ func (h *DeviceHandler) CreateNewDevice(c echo.Context) error {
 
 func (h *DeviceHandler) GetDeviceByID(c echo.Context) error {
 	reqID := c.Param("id")
+	reqPath := c.Request().URL.Path
 
 	deviceID, err := uuid.Parse(reqID)
 	if err != nil {
-		return apperror.ErrBadRequest.WithMessage("validation failed, invalid device id").WithDetails(echo.Map{
-			"device_id": reqID,
-		}).Wrap(err)
+		return apperror.ErrBadRequest.WithMessage("invalid device ID format").WithDetails(echo.Map{
+			"error": err.Error(),
+		}).WithPath(reqPath).Wrap(err)
 	}
 
 	deviceExist, err := h.DeviceService.GetDeviceByID(c.Request().Context(), deviceID)
 	if err != nil {
-		return apperror.ErrDBQuery.WithDetails(echo.Map{
-			"error": err.Error(),
-		}).Wrap(err)
+		return apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, fmt.Sprintf("failed to retrieve device with ID %s", reqID)).WithPath(reqID)
 	}
 
 	return response.JSON(c, int(http.StatusOK), echo.Map{
 		"device": deviceExist,
 	})
-
 }

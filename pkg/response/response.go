@@ -76,11 +76,11 @@ func Error(c echo.Context, err error) error {
 		appError = appError.WithTraceID(traceID)
 	}
 
-	msg, ok := apperror.CodeMessages[appError.Code]
-	if !ok {
-		msg = "oops!!! something went wrong"
-	}
-	appError = appError.WithMessage(msg)
+	// msg, ok := apperror.CodeMessages[appError.Code]
+	// if !ok {
+	// 	msg = "oops!!! something went wrong"
+	// }
+	// appError = appError.WithMessage(msg)
 
 	// Log the error with details for debugging
 	logFields := []zap.Field{
