@@ -39,6 +39,54 @@ func (dto *CreateNewDeviceDTO) ToDevice() *model.Device {
 	}
 }
 
+type UpdateDeviceDTO struct {
+	Name            *string `json:"name,omitempty" validate:"omitempty,max=255"`
+	Description     *string `json:"description,omitempty" validate:"omitempty"`
+	Manufacturer    *string `json:"manufacturer,omitempty" validate:"omitempty"`
+	ModelNumber     *string `json:"model_number,omitempty" validate:"omitempty"`
+	SerialNumber    *string `json:"serial_number,omitempty" validate:"omitempty"`
+	FirmwareVersion *string `json:"firmware_version,omitempty" validate:"omitempty"`
+	IPAddress       *string `json:"ip_address,omitempty" validate:"omitempty,ip"`
+	MACAddress      *string `json:"mac_address,omitempty" validate:"omitempty,max=17"`
+	ConnectionType  *string `json:"connection_type,omitempty" validate:"omitempty"`
+}
+
+func (dto *UpdateDeviceDTO) Validate() error { return validatorz.Validate.Struct(dto) }
+
+func (dto *UpdateDeviceDTO) ToDevice() *model.Device {
+	device := &model.Device{}
+
+	if dto.Name != nil {
+		device.Name = *dto.Name
+	}
+	if dto.Description != nil {
+		device.Description = *dto.Description
+	}
+	if dto.Manufacturer != nil {
+		device.Manufacturer = *dto.Manufacturer
+	}
+	if dto.ModelNumber != nil {
+		device.ModelNumber = *dto.ModelNumber
+	}
+	if dto.SerialNumber != nil {
+		device.SerialNumber = *dto.SerialNumber
+	}
+	if dto.FirmwareVersion != nil {
+		device.FirmwareVersion = *dto.FirmwareVersion
+	}
+	if dto.IPAddress != nil {
+		device.IPAddress = *dto.IPAddress
+	}
+	if dto.MACAddress != nil {
+		device.MACAddress = *dto.MACAddress
+	}
+	if dto.ConnectionType != nil {
+		device.ConnectionType = *dto.ConnectionType
+	}
+
+	return device
+}
+
 type BroadcastConfigDTO struct {
 	BroadcastEnabled bool   `json:"broadcast_enabled"`
 	Protocol         string `json:"protocol"`

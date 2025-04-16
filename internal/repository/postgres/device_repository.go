@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -51,11 +52,10 @@ func (r *DeviceRepositoryPostgres) GetByID(ctx context.Context, deviceID uuid.UU
 	return &d, nil
 }
 
-func (r *DeviceRepositoryPostgres) Update(ctx context.Context, deviceData *model.Device) (*model.Device, error) {
-	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
-	defer cancel()
+func (r *DeviceRepositoryPostgres) Update(ctx context.Context, deviceID uuid.UUID, deviceData *model.Device) (*model.Device, error) {
+	tx := r.db.WithContext(ctx).Model(&model.Device{}).Clauses(clause.Returning{}).Where("id = ?", deviceID).Select("*").Updates(&deviceData)
+	fmt.Println(tx.Statement.SQL.String())
 
-	tx := r.db.WithContext(ctx).Model(&model.Device{}).Clauses(clause.Returning{}).Where("id = ?", deviceData.ID).Updates(&deviceData)
 	if tx.Error != nil {
 		return nil, repository.HandleRepoError("update resource", tx.Error, apperror.ErrDBUpdate, r.log)
 	}
