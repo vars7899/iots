@@ -1,12 +1,23 @@
 package apperror
 
-func WrapAppErrWithContext(err error, contextMessage string, fallbackCode ErrorCode) error {
+import "errors"
+
+func WrapAppErrWithContext(err error, contextMessage string, fallbackCode ErrorCode) *AppError {
 	if err == nil {
 		return nil
 	}
-	if appError, ok := err.(*AppError); ok {
-		return appError.WithMessage(contextMessage)
+
+	var appErr *AppError
+	if errors.As(err, &appErr) {
+		if contextMessage != "" {
+			return appErr.WithMessagef("%s: %s", contextMessage, appErr.Message)
+		}
+		return appErr
 	}
 
-	return New(fallbackCode).WithMessage(contextMessage).Wrap(err)
+	newAppErr := New(fallbackCode)
+	if contextMessage != "" {
+		newAppErr = newAppErr.WithMessage(contextMessage)
+	}
+	return newAppErr.Wrap(err)
 }
