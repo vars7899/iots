@@ -3,6 +3,7 @@ package v1
 import (
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/vars7899/iots/internal/api/v1/dto"
 	"github.com/vars7899/iots/internal/service"
@@ -60,7 +61,25 @@ func (h *DeviceHandler) CreateNewDevice(c echo.Context) error {
 	})
 }
 
-// func (h *DeviceHandler) GetDeviceByID(c echo.Context) error {
-// 	deviceID := c.Param("id")
+func (h *DeviceHandler) GetDeviceByID(c echo.Context) error {
+	reqID := c.Param("id")
 
-// }
+	deviceID, err := uuid.Parse(reqID)
+	if err != nil {
+		return apperror.ErrBadRequest.WithMessage("validation failed, invalid device id").WithDetails(echo.Map{
+			"device_id": reqID,
+		}).Wrap(err)
+	}
+
+	deviceExist, err := h.DeviceService.GetDeviceByID(c.Request().Context(), deviceID)
+	if err != nil {
+		return apperror.ErrDBQuery.WithDetails(echo.Map{
+			"error": err.Error(),
+		}).Wrap(err)
+	}
+
+	return response.JSON(c, int(http.StatusOK), echo.Map{
+		"device": deviceExist,
+	})
+
+}
