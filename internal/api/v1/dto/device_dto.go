@@ -5,21 +5,23 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"github.com/vars7899/iots/internal/domain"
 	"github.com/vars7899/iots/internal/domain/model"
 	"github.com/vars7899/iots/internal/validatorz"
 )
 
 type CreateNewDeviceDTO struct {
-	Name            string `json:"name" validate:"required,max=255"`
-	Description     string `json:"description,omitempty"`
-	Manufacturer    string `json:"manufacturer" validate:"required"`
-	ModelNumber     string `json:"model_number" validate:"required"`
-	SerialNumber    string `json:"serial_number" validate:"required"`
-	FirmwareVersion string `json:"firmware_version" validate:"required"`
-	IPAddress       string `json:"ip_address" validate:"omitempty,ip"`
-	MACAddress      string `json:"mac_address" validate:"omitempty,max=17"`
-	ConnectionType  string `json:"connection_type" validate:"omitempty"`
-	// Location        DeviceLocationDTO  `json:"location"`
+	Name            string         `json:"name" validate:"required,max=255"`
+	Description     string         `json:"description,omitempty" validate:"max=255"`
+	Manufacturer    string         `json:"manufacturer" validate:"required"`
+	ModelNumber     string         `json:"model_number" validate:"required"`
+	SerialNumber    string         `json:"serial_number" validate:"required"`
+	FirmwareVersion string         `json:"firmware_version" validate:"required"`
+	IPAddress       string         `json:"ip_address" validate:"omitempty,ip"`
+	MACAddress      string         `json:"mac_address" validate:"omitempty,max=17"`
+	ConnectionType  string         `json:"connection_type" validate:"required,connection_type"`
+	Location        GeoLocationDTO `json:"location" validate:"required"`
+
 	// TelemetryConfig TelemetryConfigDTO `json:"telemetry_config"`
 	// BroadcastConfig BroadcastConfigDTO `json:"broadcast_config"`
 	// Capabilities    []string           `json:"capabilities"`
@@ -29,7 +31,7 @@ type CreateNewDeviceDTO struct {
 
 func (dto *CreateNewDeviceDTO) Validate() error { return validatorz.Validate.Struct(dto) }
 
-func (dto *CreateNewDeviceDTO) ToDevice() *model.Device {
+func (dto *CreateNewDeviceDTO) AsModel() *model.Device {
 	return &model.Device{
 		Name:            dto.Name,
 		Description:     dto.Description,
@@ -39,7 +41,8 @@ func (dto *CreateNewDeviceDTO) ToDevice() *model.Device {
 		FirmwareVersion: dto.FirmwareVersion,
 		IPAddress:       dto.IPAddress,
 		MACAddress:      dto.MACAddress,
-		ConnectionType:  dto.ConnectionType,
+		ConnectionType:  domain.ConnectionType(dto.ConnectionType),
+		Location:        *dto.Location.AsModel(),
 	}
 }
 
@@ -89,7 +92,7 @@ func (dto *UpdateDeviceDTO) ToDevice() *model.Device {
 		device.MACAddress = *dto.MACAddress
 	}
 	if dto.ConnectionType != nil {
-		device.ConnectionType = *dto.ConnectionType
+		device.ConnectionType = domain.ConnectionType(*dto.ConnectionType)
 	}
 
 	return device
@@ -106,7 +109,7 @@ func (dto *BulkCreateDevicesDTO) Validate() error {
 func (dto *BulkCreateDevicesDTO) ToDevices() []*model.Device {
 	devices := make([]*model.Device, 0, len(dto.Devices))
 	for _, d := range dto.Devices {
-		devices = append(devices, d.ToDevice())
+		devices = append(devices, d.AsModel())
 	}
 	return devices
 }
@@ -125,7 +128,6 @@ func (dto *BulkDeleteDeviceDTO) ToUUIDs() ([]uuid.UUID, error) {
 		}
 		uuids[i] = uid
 	}
-	fmt.Println(uuids, "donedone")
 	return uuids, nil
 }
 

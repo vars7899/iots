@@ -57,7 +57,7 @@ func (h *DeviceHandler) CreateNewDevice(c echo.Context) error {
 		return err
 	}
 
-	createdDevice, err := h.DeviceService.CreateDevice(c.Request().Context(), dto.ToDevice())
+	createdDevice, err := h.DeviceService.CreateDevice(c.Request().Context(), dto.AsModel())
 	if err != nil {
 		return apperror.ErrorHandler(err, apperror.ErrCodeDBInsert, "failed to insert device").WithPath(reqPath).Wrap(err)
 	}

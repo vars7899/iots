@@ -50,4 +50,19 @@ func registerCustomValidators() {
 		}
 		return domain.IsValidStatus(statusStr)
 	})
+
+	Validate.RegisterCustomTypeFunc(func(field reflect.Value) interface{} {
+		if field.Type() == reflect.TypeOf(domain.ConnectionType("")) {
+			return string(field.Interface().(domain.ConnectionType))
+		}
+		return nil
+	}, domain.ConnectionType(""))
+
+	Validate.RegisterValidation("connection_type", func(fl validator.FieldLevel) bool {
+		connectionTypeStr, ok := fl.Field().Interface().(string)
+		if !ok {
+			return false
+		}
+		return domain.IsValidConnectionType(connectionTypeStr)
+	})
 }
