@@ -35,6 +35,11 @@ func (h *DeviceHandler) RegisterRoutes(e *echo.Group) {
 	e.GET("/:id", h.GetDeviceByID)
 	e.DELETE("/:id", h.DeleteDeviceByID)
 	e.PATCH("/:id", h.UpdateDevice)
+	// bulk operation endpoints
+	// TODO: add middleware to protect only for admin
+	e.POST("/bulk", h.CreateNewDeviceInBulk)
+	e.DELETE("/bulk", h.DeleteDeviceInBulk)
+	e.PATCH("/bulk", h.UpdateDeviceInBulk)
 }
 
 func (h *DeviceHandler) CreateNewDevice(c echo.Context) error {
@@ -125,5 +130,69 @@ func (h *DeviceHandler) UpdateDevice(c echo.Context) error {
 	h.log.Debug("device updated", zap.String("device_id", deviceID.String()))
 	return response.JSON(c, int(http.StatusOK), echo.Map{
 		"device": updatedDevice,
+	})
+}
+
+func (h *DeviceHandler) CreateNewDeviceInBulk(c echo.Context) error {
+	var dto dto.BulkCreateDevicesDTO
+	reqPath := utils.GetRequestUrlPath(c)
+
+	if err := utils.BindAndValidate(c, &dto); err != nil {
+		return err
+	}
+
+	createdDevices, err := h.DeviceService.BulkCreateDevices(c.Request().Context(), dto.ToDevices())
+	if err != nil {
+		return apperror.ErrorHandler(err, apperror.ErrCodeDBInsert, "failed to bulk insert devices").WithPath(reqPath)
+	}
+
+	h.log.Debug("bulk device creation successful", zap.Int("count", len(createdDevices)))
+	return response.JSON(c, http.StatusCreated, echo.Map{
+		"message": "devices created successfully",
+		"devices": createdDevices,
+	})
+}
+
+func (h *DeviceHandler) DeleteDeviceInBulk(c echo.Context) error {
+	var dto dto.BulkDeleteDeviceDTO
+	reqPath := utils.GetRequestUrlPath(c)
+
+	if err := utils.BindAndValidate(c, &dto); err != nil {
+		return err
+	}
+
+	uuids, err := dto.ToUUIDs()
+	if err != nil {
+		return apperror.ErrBadRequest.WithMessage("invalid UUID format").WithPath(reqPath).Wrap(err)
+	}
+
+	if err := h.DeviceService.BulkDeleteDevices(c.Request().Context(), uuids); err != nil {
+		return apperror.ErrorHandler(err, apperror.ErrCodeDBDelete, "failed to bulk delete devices").
+			WithPath(reqPath).Wrap(err)
+	}
+
+	h.log.Debug("bulk device deletion successful", zap.Int("count", len(uuids)))
+	return response.JSON(c, http.StatusOK, echo.Map{
+		"message":    "devices deleted successfully",
+		"device_ids": dto.DeviceIDs,
+	})
+}
+
+func (h *DeviceHandler) UpdateDeviceInBulk(c echo.Context) error {
+	var dto dto.BulkUpdateDeviceDTO
+	reqPath := utils.GetRequestUrlPath(c)
+
+	if err := utils.BindAndValidate(c, &dto); err != nil {
+		return err
+	}
+
+	updatedDevices, err := h.DeviceService.BulkUpdateDevices(c.Request().Context(), dto.ToDevices())
+	if err != nil {
+		return apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate, "").WithPath(reqPath).Wrap(err)
+	}
+
+	return response.JSON(c, int(http.StatusOK), echo.Map{
+		"message": "devices updated successfully",
+		"devices": updatedDevices,
 	})
 }

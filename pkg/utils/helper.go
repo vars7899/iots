@@ -34,6 +34,7 @@ func BindAndValidate(c echo.Context, dto interface{}) error {
 			"error": err.Error(),
 		}).WithPath(reqPath).Wrap(err)
 	}
+
 	if v, ok := dto.(interface{ Validate() error }); ok {
 		if err := v.Validate(); err != nil {
 			return apperror.ErrValidation.WithMessage("validation failed").WithDetails(echo.Map{

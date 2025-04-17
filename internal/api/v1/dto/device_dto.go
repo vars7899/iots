@@ -1,6 +1,10 @@
 package dto
 
 import (
+	"fmt"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/vars7899/iots/internal/domain/model"
 	"github.com/vars7899/iots/internal/validatorz"
 )
@@ -40,6 +44,7 @@ func (dto *CreateNewDeviceDTO) ToDevice() *model.Device {
 }
 
 type UpdateDeviceDTO struct {
+	ID              string  `json:"id" validate:"required,uuid"`
 	Name            *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	Description     *string `json:"description,omitempty" validate:"omitempty"`
 	Manufacturer    *string `json:"manufacturer,omitempty" validate:"omitempty"`
@@ -55,6 +60,9 @@ func (dto *UpdateDeviceDTO) Validate() error { return validatorz.Validate.Struct
 
 func (dto *UpdateDeviceDTO) ToDevice() *model.Device {
 	device := &model.Device{}
+
+	deviceID, _ := uuid.Parse(dto.ID)
+	device.ID = deviceID
 
 	if dto.Name != nil {
 		device.Name = *dto.Name
@@ -85,6 +93,83 @@ func (dto *UpdateDeviceDTO) ToDevice() *model.Device {
 	}
 
 	return device
+}
+
+type BulkCreateDevicesDTO struct {
+	Devices []CreateNewDeviceDTO `json:"devices" validate:"required,dive"`
+}
+
+func (dto *BulkCreateDevicesDTO) Validate() error {
+	return validatorz.Validate.Struct(dto)
+}
+
+func (dto *BulkCreateDevicesDTO) ToDevices() []*model.Device {
+	devices := make([]*model.Device, 0, len(dto.Devices))
+	for _, d := range dto.Devices {
+		devices = append(devices, d.ToDevice())
+	}
+	return devices
+}
+
+type BulkDeleteDeviceDTO struct {
+	DeviceIDs []string `json:"device_ids" validate:"required,min=1,dive,required,uuid"`
+}
+
+// After validation, convert strings to UUIDs
+func (dto *BulkDeleteDeviceDTO) ToUUIDs() ([]uuid.UUID, error) {
+	uuids := make([]uuid.UUID, len(dto.DeviceIDs))
+	for i, id := range dto.DeviceIDs {
+		uid, err := uuid.Parse(id)
+		if err != nil {
+			return nil, err
+		}
+		uuids[i] = uid
+	}
+	fmt.Println(uuids, "donedone")
+	return uuids, nil
+}
+
+func (dto *BulkDeleteDeviceDTO) Validate() error {
+	err := validatorz.Validate.Struct(dto)
+	if err != nil {
+		// Handle validation errors
+		if validationErrors, ok := err.(validator.ValidationErrors); ok {
+			// You can format validation errors here
+			return fmt.Errorf("validation error: %v", validationErrors)
+		}
+		return err
+	}
+
+	// Additional custom validation logic
+	if len(dto.DeviceIDs) == 0 {
+		return fmt.Errorf("at least one device ID is required")
+	}
+
+	// Check for nil UUIDs
+	for i, id := range dto.DeviceIDs {
+		id, _ := uuid.Parse(id)
+		if id == uuid.Nil {
+			return fmt.Errorf("device ID at position %d cannot be nil", i)
+		}
+	}
+
+	return nil
+}
+
+type BulkUpdateDeviceDTO struct {
+	Devices []UpdateDeviceDTO `json:"devices" validate:"required,dive"`
+}
+
+func (dto *BulkUpdateDeviceDTO) Validate() error {
+	return validatorz.Validate.Struct(dto)
+}
+
+func (dto *BulkUpdateDeviceDTO) ToDevices() []*model.Device {
+	devices := make([]*model.Device, 0, len(dto.Devices))
+	for _, d := range dto.Devices {
+		devices = append(devices, d.ToDevice())
+	}
+	return devices
 }
 
 type BroadcastConfigDTO struct {

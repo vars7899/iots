@@ -10,14 +10,14 @@ type DeviceID string
 
 type Device struct {
 	ID              uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid();" json:"id"`
-	Name            string    `gorm:"type:varchar(255);not null;uniqueIndex" json:"name"`
+	Name            string    `gorm:"type:varchar(255);not null;index" json:"name"`
 	Description     string    `gorm:"type:text;not null" json:"description"`
 	Manufacturer    string    `gorm:"type:varchar(255);not null;index" json:"manufacturer"`
 	ModelNumber     string    `gorm:"type:varchar(255);not null" json:"model_number"`
 	SerialNumber    string    `gorm:"type:varchar(255);not null" json:"serial_number"`
 	FirmwareVersion string    `gorm:"type:varchar(20);not null" json:"firmware_version"`
 	IPAddress       string    `gorm:"type:varchar(45);index" json:"ip_address"`
-	MACAddress      string    `gorm:"type:varchar(17);uniqueIndex" json:"mac_address"`
+	MACAddress      string    `gorm:"type:varchar(17);index" json:"mac_address"`
 	ConnectionType  string    `gorm:"type:varchar(20)" json:"connection_type"`
 	// Location        DeviceLocation `gorm:"embedded" json:"location"`
 	// IsOnline        bool            `gorm:"default:false" json:"is_online"`

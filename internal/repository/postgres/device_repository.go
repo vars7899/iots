@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,7 +29,7 @@ type DeviceRepositoryPostgres struct {
 
 func NewDeviceRepositoryPostgres(db *gorm.DB) repository.DeviceRepository {
 	log := logger.Lgr.Named("postgres.DeviceRepositoryPostgres")
-	return &DeviceRepositoryPostgres{db: db, log: log, queryTimeout: time.Millisecond * 10000, maxBatchSize: 100}
+	return &DeviceRepositoryPostgres{db: db, log: log, queryTimeout: time.Millisecond * 10000, maxBatchSize: 100} // TODO: tune the maxBatchSize for postgres (100 - 500)
 }
 
 func (r *DeviceRepositoryPostgres) Create(ctx context.Context, deviceData *model.Device) (*model.Device, error) {
@@ -202,24 +204,29 @@ func (r *DeviceRepositoryPostgres) BulkCreate(ctx context.Context, input []*mode
 
 func (r *DeviceRepositoryPostgres) BulkUpdate(ctx context.Context, input []*model.Device) ([]*model.Device, error) {
 	deviceList := make([]*model.Device, 0, len(input))
-	var err error
 
-	r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		deviceList, err = r.bulkUpdateTx(ctx, tx, input)
-		r.log.Error("failed to bulk update device", zap.Int("count", len(input)), zap.Error(err))
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		d, err := r.bulkUpdateTx(ctx, tx, input)
+		deviceList = d
 		return err
 	})
-
+	if err != nil {
+		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate, "").Wrap(err)
+	}
 	r.log.Debug("bulk devices updated", zap.Int("count", len(input)))
 	return deviceList, nil
 }
 
 func (r *DeviceRepositoryPostgres) BulkDelete(ctx context.Context, input []uuid.UUID) error {
-	r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		err := r.bulkDeleteTx(ctx, tx, input)
-		r.log.Error("failed to bulk update device", zap.Int("count", len(input)), zap.Error(err))
-		return err
+	if len(input) == 0 {
+		return apperror.ErrBadRequest.WithMessage("no device IDs provided for bulk delete")
+	}
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return r.bulkDeleteTx(ctx, tx, input)
 	})
+	if err != nil {
+		return apperror.ErrDBDelete.WithMessage("failed to delete devices in bulk")
+	}
 
 	r.log.Debug("bulk devices deleted", zap.Int("count", len(input)))
 	return nil
@@ -277,27 +284,79 @@ func (r *DeviceRepositoryPostgres) bulkCreateTx(ctx context.Context, tx *gorm.DB
 
 func (r *DeviceRepositoryPostgres) bulkUpdateTx(ctx context.Context, tx *gorm.DB, deviceList []*model.Device) ([]*model.Device, error) {
 	op := "bulkUpdateTx"
-
-	batchSize := r.maxBatchSize
-	totalDevices := len(deviceList)
-
-	devices := make([]*model.Device, 0, totalDevices)
-	for i := 0; i < totalDevices; i += batchSize {
-		end := i + batchSize
-		if end < batchSize {
-			end = totalDevices
-		}
-
-		deviceBatch := deviceList[i:end]
-		if err := tx.WithContext(ctx).Model(&model.Device{}).Clauses(clause.Returning{}).Select("*").Updates(&deviceBatch).Error; err != nil {
-			return nil, repository.HandleRepoError(op, err, apperror.ErrDBUpdate, r.log)
-		}
-
-		devices = append(devices, deviceBatch...)
+	if len(deviceList) == 0 {
+		return nil, nil
 	}
 
-	r.log.Debug("bulk device updated successfully", zap.Int("devices updated", totalDevices))
-	return devices, nil
+	// check for available input ids
+	inputIDs := make([]string, 0, len(deviceList))
+
+	for _, d := range deviceList {
+		fmt.Println(d.FirmwareVersion)
+		inputIDs = append(inputIDs, d.ID.String())
+	}
+
+	var existingIDs []string
+	if err := tx.Raw(`
+			SELECT id FROM devices
+			WHERE id IN (?)
+		`, inputIDs).Scan(&existingIDs).Error; err != nil {
+		return nil, repository.HandleRepoError(op, err, apperror.ErrDBQuery, r.log)
+	}
+
+	missing := findMissingIDs(inputIDs, existingIDs)
+	if len(missing) > 0 {
+		return nil, apperror.ErrInvalidUUID.WithMessage(fmt.Sprintf("some device IDs do not exist: %v", missing))
+	}
+
+	updatableFields := []string{"name", "description", "manufacturer", "model_number", "serial_number", "firmware_version", "ip_address", "mac_address", "connection_type"}
+	caseMap := make(map[string][]string)
+	idSet := make([]string, 0, len(deviceList))
+
+	for _, device := range deviceList {
+		idStr := device.ID.String()
+		idSet = append(idSet, fmt.Sprintf("'%s'", idStr))
+
+		val := reflect.ValueOf(device).Elem()
+		for _, field := range updatableFields {
+			fieldVal := val.FieldByName(field)
+			if isZeroValue(fieldVal) {
+				continue
+			}
+
+			fieldName := strings.ToLower(field)
+			caseMap[fieldName] = append(caseMap[fieldName], fmt.Sprintf("WHEN '%s' THEN '%v'", idStr, escape(fmt.Sprintf("%v", fieldVal.Interface()))))
+		}
+	}
+
+	setClauses := make([]string, 0)
+	for field, cases := range caseMap {
+		if len(cases) == 0 {
+			continue
+		}
+		caseSQL := fmt.Sprintf("%s = CASE id\n    %s\nEND", field, strings.Join(cases, "\n    "))
+		setClauses = append(setClauses, caseSQL)
+	}
+
+	if len(setClauses) == 0 {
+		r.log.Warn("no valid fields to update in bulk")
+		return nil, nil
+	}
+
+	query := fmt.Sprintf(`
+		UPDATE devices
+		SET %s
+		WHERE id IN (%s)
+		RETURNING *;
+	`, strings.Join(setClauses, ",\n"), strings.Join(idSet, ","))
+
+	var updated []*model.Device
+	if err := tx.WithContext(ctx).Raw(query).Scan(&updated).Error; err != nil {
+		return nil, repository.HandleRepoError(op, err, apperror.ErrDBUpdate, r.log)
+	}
+
+	r.log.Debug("bulk update completed using CASE WHEN", zap.Int("updated", len(updated)))
+	return updated, nil
 }
 
 func (r *DeviceRepositoryPostgres) bulkDeleteTx(ctx context.Context, tx *gorm.DB, deviceIDs []uuid.UUID) error {
@@ -311,9 +370,9 @@ func (r *DeviceRepositoryPostgres) bulkDeleteTx(ctx context.Context, tx *gorm.DB
 		if end > totalDevices {
 			end = totalDevices
 		}
-		deviceBatch := deviceIDs[i:end]
 
-		if err := tx.WithContext(ctx).Model(&model.Device{}).Delete(deviceBatch).Error; err != nil {
+		deviceBatch := deviceIDs[i:end]
+		if err := tx.WithContext(ctx).Where("id IN (?)", deviceBatch).Delete(&model.Device{}).Error; err != nil {
 			return repository.HandleRepoError(op, err, apperror.ErrDBDelete, r.log)
 		}
 	}
@@ -369,4 +428,39 @@ func (r *DeviceRepositoryPostgres) updateDevicesStatusTx(ctx context.Context, tx
 		updatedDevices = append(updatedDevices, devices...)
 	}
 	return updatedDevices, nil
+}
+
+func escape(s string) string {
+	// This is a quick patch for single quote escaping.
+	return strings.ReplaceAll(s, "'", "''")
+}
+
+func isZeroValue(v reflect.Value) bool {
+	// Handles invalid (unset) fields
+	if !v.IsValid() {
+		return true
+	}
+
+	// Handle pointers: dereference them
+	if v.Kind() == reflect.Ptr {
+		return v.IsNil()
+	}
+
+	// Use DeepEqual to compare with zero value of the type
+	zero := reflect.Zero(v.Type())
+	return reflect.DeepEqual(v.Interface(), zero.Interface())
+}
+
+func findMissingIDs(all, existing []string) []string {
+	exists := map[string]struct{}{}
+	for _, id := range existing {
+		exists[id] = struct{}{}
+	}
+	var missing []string
+	for _, id := range all {
+		if _, found := exists[id]; !found {
+			missing = append(missing, id)
+		}
+	}
+	return missing
 }
