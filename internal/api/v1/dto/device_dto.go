@@ -172,6 +172,14 @@ func (dto *BulkUpdateDeviceDTO) ToDevices() []*model.Device {
 	return devices
 }
 
+type UpdateDeviceStatusDTO struct {
+	Status string `json:"status" validate:"required,status"`
+}
+
+func (dto *UpdateDeviceStatusDTO) Validate() error {
+	return validatorz.Validate.Struct(dto)
+}
+
 type BroadcastConfigDTO struct {
 	BroadcastEnabled bool   `json:"broadcast_enabled"`
 	Protocol         string `json:"protocol"`

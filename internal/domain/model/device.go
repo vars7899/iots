@@ -4,33 +4,35 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/vars7899/iots/internal/domain"
+	"gorm.io/gorm"
 )
 
 type DeviceID string
 
 type Device struct {
-	ID              uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid();" json:"id"`
-	Name            string    `gorm:"type:varchar(255);not null;index" json:"name"`
-	Description     string    `gorm:"type:text;not null" json:"description"`
-	Manufacturer    string    `gorm:"type:varchar(255);not null;index" json:"manufacturer"`
-	ModelNumber     string    `gorm:"type:varchar(255);not null" json:"model_number"`
-	SerialNumber    string    `gorm:"type:varchar(255);not null" json:"serial_number"`
-	FirmwareVersion string    `gorm:"type:varchar(20);not null" json:"firmware_version"`
-	IPAddress       string    `gorm:"type:varchar(45);index" json:"ip_address"`
-	MACAddress      string    `gorm:"type:varchar(17);index" json:"mac_address"`
-	ConnectionType  string    `gorm:"type:varchar(20)" json:"connection_type"`
+	ID              uuid.UUID     `gorm:"type:uuid;primaryKey;default:gen_random_uuid();" json:"id"`
+	Name            string        `gorm:"type:varchar(255);not null;index" json:"name"`
+	Description     string        `gorm:"type:text;not null" json:"description"`
+	Manufacturer    string        `gorm:"type:varchar(255);not null;index" json:"manufacturer"`
+	ModelNumber     string        `gorm:"type:varchar(255);not null" json:"model_number"`
+	SerialNumber    string        `gorm:"type:varchar(255);not null" json:"serial_number"`
+	FirmwareVersion string        `gorm:"type:varchar(20);not null" json:"firmware_version"`
+	IPAddress       string        `gorm:"type:varchar(45);index" json:"ip_address"`
+	MACAddress      string        `gorm:"type:varchar(17);index" json:"mac_address"`
+	ConnectionType  string        `gorm:"type:varchar(20)" json:"connection_type"`
+	IsOnline        bool          `gorm:"default:false" json:"is_online"`
+	Status          domain.Status `gorm:"type:varchar(20);default:'pending'" json:"status"`
 	// Location        DeviceLocation `gorm:"embedded" json:"location"`
-	// IsOnline        bool            `gorm:"default:false" json:"is_online"`
 	// LastConnected   *time.Time      `json:"last_connected"`
-	// CreatedAt       time.Time       `gorm:"autoCreateTime" json:"created_at"`
-	// UpdatedAt       time.Time       `gorm:"autoUpdateTime" json:"updated_at"`
-	// DeletedAt       gorm.DeletedAt  `gorm:"index" json:"-"`
+	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 	// Sensors         []sensor.Sensor `gorm:"foreignKey:DeviceID" json:"sensors"`
 	// TelemetryConfig TelemetryConfig `gorm:"embedded" json:"telemetry_config"`
 	// BroadcastConfig BroadcastConfig `gorm:"embedded" json:"broadcast_config"`
 	// Capabilities    pq.StringArray  `gorm:"type:text[] json:"capabilities""` // array of capability identifiers
 	// Tags            pq.StringArray  `gorm:"type:text[] json:"tags""`
-	// Status          string          `gorm:"type:varchar(20),default:'inactive'" json:"status"` // active, inactive, maintenance, etc.
 	// Metadata        JSON            `gorm:"type:jsonb" json:"metadata"`
 }
 

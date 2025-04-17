@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/vars7899/iots/internal/api/v1/dto"
+	"github.com/vars7899/iots/internal/domain"
 	"github.com/vars7899/iots/internal/service"
 	"github.com/vars7899/iots/pkg/apperror"
 	"github.com/vars7899/iots/pkg/logger"
@@ -40,6 +41,11 @@ func (h *DeviceHandler) RegisterRoutes(e *echo.Group) {
 	e.POST("/bulk", h.CreateNewDeviceInBulk)
 	e.DELETE("/bulk", h.DeleteDeviceInBulk)
 	e.PATCH("/bulk", h.UpdateDeviceInBulk)
+	// status endpoints
+	e.PATCH("/:id/status", h.UpdateDeviceStatus)
+	e.PATCH("/:id/online", h.MarkDeviceOnline)
+	e.PATCH("/:id/offline", h.MarkDeviceOffline)
+
 }
 
 func (h *DeviceHandler) CreateNewDevice(c echo.Context) error {
@@ -194,5 +200,67 @@ func (h *DeviceHandler) UpdateDeviceInBulk(c echo.Context) error {
 	return response.JSON(c, int(http.StatusOK), echo.Map{
 		"message": "devices updated successfully",
 		"devices": updatedDevices,
+	})
+}
+
+func (h *DeviceHandler) UpdateDeviceStatus(c echo.Context) error {
+	paramID := c.Param("id")
+	reqPath := utils.GetRequestUrlPath(c)
+
+	deviceID, err := uuid.Parse(paramID)
+	if err != nil {
+		return apperror.ErrInvalidUUID.WithMessage("invalid uuid format").WithPath(reqPath).Wrap(err)
+	}
+
+	var dto dto.UpdateDeviceStatusDTO
+	if err := utils.BindAndValidate(c, &dto); err != nil {
+		return err
+	}
+
+	err = h.DeviceService.UpdateDeviceStatus(c.Request().Context(), deviceID, domain.Status(dto.Status))
+	if err != nil {
+		return apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate)
+	}
+
+	return response.JSON(c, int(http.StatusOK), echo.Map{
+		"message": fmt.Sprintf("device with ID %s status updated to %s", deviceID.String(), dto.Status),
+	})
+}
+func (h *DeviceHandler) MarkDeviceOnline(c echo.Context) error {
+	paramID := c.Param("id")
+	reqPath := utils.GetRequestUrlPath(c)
+
+	deviceID, err := uuid.Parse(paramID)
+	if err != nil {
+		return apperror.ErrInvalidUUID.WithMessage("invalid uuid format").WithPath(reqPath).Wrap(err)
+	}
+
+	updatedDevice, err := h.DeviceService.MarkDeviceAsOnline(c.Request().Context(), deviceID)
+	if err != nil {
+		return apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate)
+	}
+
+	return response.JSON(c, int(http.StatusOK), echo.Map{
+		"message": fmt.Sprintf("device with ID %s marked as online", deviceID.String()),
+		"device":  updatedDevice,
+	})
+}
+func (h *DeviceHandler) MarkDeviceOffline(c echo.Context) error {
+	paramID := c.Param("id")
+	reqPath := utils.GetRequestUrlPath(c)
+
+	deviceID, err := uuid.Parse(paramID)
+	if err != nil {
+		return apperror.ErrInvalidUUID.WithMessage("invalid uuid format").WithPath(reqPath).Wrap(err)
+	}
+
+	updatedDevice, err := h.DeviceService.MarkDeviceAsOffline(c.Request().Context(), deviceID)
+	if err != nil {
+		return apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate)
+	}
+
+	return response.JSON(c, int(http.StatusOK), echo.Map{
+		"message": fmt.Sprintf("device with ID %s marked as offline", deviceID.String()),
+		"device":  updatedDevice,
 	})
 }

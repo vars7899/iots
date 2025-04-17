@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/vars7899/iots/internal/domain"
 	"github.com/vars7899/iots/internal/domain/model"
 	"github.com/vars7899/iots/pkg/pagination"
 )
@@ -30,7 +31,7 @@ type DeviceRepository interface {
 	// FindByLastConnectedRange(ctx context.Context, start, end time.Time, page, pageSize int) ([]device.Device, int64, error)
 
 	// Status management
-	UpdateStatus(ctx context.Context, deviceID uuid.UUID, status string) error
+	UpdateStatus(ctx context.Context, deviceID uuid.UUID, status domain.Status) error
 	MarkOnline(ctx context.Context, deviceID uuid.UUID) (*model.Device, error)
 	MarkOffline(ctx context.Context, deviceID uuid.UUID) (*model.Device, error)
 

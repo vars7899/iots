@@ -8,10 +8,15 @@ import (
 )
 
 // ErrorHandler provides a universal way to handle and wrap errors
-func ErrorHandler(err error, defaultCode ErrorCode, message string) *AppError {
+func ErrorHandler(err error, defaultCode ErrorCode, args ...string) *AppError {
 	// If nil error, return nil
 	if err == nil {
 		return nil
+	}
+
+	message := ""
+	if len(args) > 0 && args[0] != "" {
+		message = args[0]
 	}
 
 	// If already an AppError, just update the message if provided

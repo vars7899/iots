@@ -27,7 +27,7 @@ func GetRequestUrlPath(c echo.Context) string {
 	return c.Request().URL.Path
 }
 
-func BindAndValidate(c echo.Context, dto interface{}) error {
+func BindAndValidate(c echo.Context, dto interface{}) *apperror.AppError {
 	reqPath := GetRequestUrlPath(c)
 	if err := c.Bind(dto); err != nil {
 		return apperror.ErrBadRequest.WithMessage("invalid request body").WithDetails(echo.Map{

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/vars7899/iots/internal/domain"
 	"github.com/vars7899/iots/internal/domain/model"
 	"github.com/vars7899/iots/internal/repository"
 	"github.com/vars7899/iots/pkg/apperror"
@@ -76,4 +77,14 @@ func (s *DeviceService) BulkDeleteDevices(ctx context.Context, ids []uuid.UUID) 
 
 func (s *DeviceService) BulkUpdateDevices(ctx context.Context, devices []*model.Device) ([]*model.Device, error) {
 	return s.deviceRepo.BulkUpdate(ctx, devices)
+}
+
+func (s *DeviceService) MarkDeviceAsOnline(ctx context.Context, deviceID uuid.UUID) (*model.Device, error) {
+	return s.deviceRepo.MarkOnline(ctx, deviceID)
+}
+func (s *DeviceService) MarkDeviceAsOffline(ctx context.Context, deviceID uuid.UUID) (*model.Device, error) {
+	return s.deviceRepo.MarkOffline(ctx, deviceID)
+}
+func (s *DeviceService) UpdateDeviceStatus(ctx context.Context, deviceID uuid.UUID, status domain.Status) error {
+	return s.deviceRepo.UpdateStatus(ctx, deviceID, status)
 }

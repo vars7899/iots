@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/vars7899/iots/internal/domain"
 	"github.com/vars7899/iots/internal/domain/model"
 	"github.com/vars7899/iots/internal/repository"
 	"github.com/vars7899/iots/pkg/apperror"
@@ -141,7 +142,7 @@ func (r *DeviceRepositoryPostgres) GetDeviceCountTransaction(tx *gorm.DB) (int64
 	return count, nil
 }
 
-func (r *DeviceRepositoryPostgres) UpdateStatus(ctx context.Context, deviceID uuid.UUID, status string) error {
+func (r *DeviceRepositoryPostgres) UpdateStatus(ctx context.Context, deviceID uuid.UUID, status domain.Status) error {
 	r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := r.UpdateStatusTx(ctx, tx, deviceID, status); err != nil {
 			return err
@@ -151,10 +152,10 @@ func (r *DeviceRepositoryPostgres) UpdateStatus(ctx context.Context, deviceID uu
 	return nil
 }
 
-func (r *DeviceRepositoryPostgres) UpdateStatusTx(ctx context.Context, tx *gorm.DB, deviceID uuid.UUID, status string) error {
+func (r *DeviceRepositoryPostgres) UpdateStatusTx(ctx context.Context, tx *gorm.DB, deviceID uuid.UUID, status domain.Status) error {
 	op := "UpdateStatusTx"
 	var deviceData model.Device
-	if err := tx.WithContext(ctx).Where("id = ?", deviceID).First(&deviceData).Error; err != nil {
+	if err := tx.WithContext(ctx).Model(&model.Device{}).Where("id = ?", deviceID).Update("status", status).First(&deviceData).Error; err != nil {
 		return repository.HandleRepoError(op, err, apperror.ErrDBQuery, r.log)
 	}
 	return nil
@@ -244,7 +245,7 @@ func (r *DeviceRepositoryPostgres) markOfflineTx(ctx context.Context, tx *gorm.D
 
 func (r *DeviceRepositoryPostgres) updateIsOnlineTx(ctx context.Context, op string, tx *gorm.DB, deviceID uuid.UUID, newState bool) (*model.Device, error) {
 	var deviceData model.Device
-	result := tx.WithContext(ctx).Clauses(clause.Returning{}).Where("id = ?", deviceID).Update("is_online", newState).First(&deviceData)
+	result := tx.WithContext(ctx).Model(&model.Device{}).Clauses(clause.Returning{}).Where("id = ?", deviceID).Update("is_online", newState).First(&deviceData)
 	if result.Error != nil {
 		return nil, repository.HandleRepoError(op, result.Error, apperror.ErrDBUpdate, r.log)
 	}
