@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/vars7899/iots/internal/domain"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -25,13 +26,13 @@ type Device struct {
 	CreatedAt       time.Time             `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt       time.Time             `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt       gorm.DeletedAt        `gorm:"index" json:"-"`
-	// LastConnected   *time.Time      `json:"last_connected"`
+	LastConnected   *time.Time            `json:"last_connected"`
+	Metadata        datatypes.JSON        `gorm:"type:jsonb" json:"metadata"`
 	// Sensors         []sensor.Sensor `gorm:"foreignKey:DeviceID" json:"sensors"`
 	// TelemetryConfig TelemetryConfig `gorm:"embedded" json:"telemetry_config"`
 	// BroadcastConfig BroadcastConfig `gorm:"embedded" json:"broadcast_config"`
 	// Capabilities    pq.StringArray  `gorm:"type:text[] json:"capabilities""` // array of capability identifiers
 	// Tags            pq.StringArray  `gorm:"type:text[] json:"tags""`
-	// Metadata        JSON            `gorm:"type:jsonb" json:"metadata"`
 }
 
 // TelemetryConfig represents configuration for device telemetry

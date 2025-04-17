@@ -8,31 +8,34 @@ import (
 	"github.com/vars7899/iots/internal/domain"
 	"github.com/vars7899/iots/internal/domain/model"
 	"github.com/vars7899/iots/internal/validatorz"
+	"gorm.io/datatypes"
 )
 
+type JsonDTO map[string]interface{}
+
 type CreateNewDeviceDTO struct {
-	Name            string         `json:"name" validate:"required,max=255"`
-	Description     string         `json:"description,omitempty" validate:"max=255"`
-	Manufacturer    string         `json:"manufacturer" validate:"required"`
-	ModelNumber     string         `json:"model_number" validate:"required"`
-	SerialNumber    string         `json:"serial_number" validate:"required"`
-	FirmwareVersion string         `json:"firmware_version" validate:"required"`
-	IPAddress       string         `json:"ip_address" validate:"omitempty,ip"`
-	MACAddress      string         `json:"mac_address" validate:"omitempty,max=17"`
-	ConnectionType  string         `json:"connection_type" validate:"required,connection_type"`
-	Location        GeoLocationDTO `json:"location" validate:"required"`
+	Name            string          `json:"name" validate:"required,max=255"`
+	Description     string          `json:"description,omitempty" validate:"max=255"`
+	Manufacturer    string          `json:"manufacturer" validate:"required"`
+	ModelNumber     string          `json:"model_number" validate:"required"`
+	SerialNumber    string          `json:"serial_number" validate:"required"`
+	FirmwareVersion string          `json:"firmware_version" validate:"required"`
+	IPAddress       string          `json:"ip_address" validate:"omitempty,ip"`
+	MACAddress      string          `json:"mac_address" validate:"omitempty,max=17"`
+	ConnectionType  string          `json:"connection_type" validate:"required,connection_type"`
+	Location        GeoLocationDTO  `json:"location" validate:"required"`
+	Metadata        *datatypes.JSON `json:"metadata" validate:"omitempty"` // TODO: meta data can have maximum 100 fields
 
 	// TelemetryConfig TelemetryConfigDTO `json:"telemetry_config"`
 	// BroadcastConfig BroadcastConfigDTO `json:"broadcast_config"`
 	// Capabilities    []string           `json:"capabilities"`
 	// Tags            []string           `json:"tags"`
-	// Metadata        JSONDTO            `json:"metadata"`
 }
 
 func (dto *CreateNewDeviceDTO) Validate() error { return validatorz.Validate.Struct(dto) }
 
 func (dto *CreateNewDeviceDTO) AsModel() *model.Device {
-	return &model.Device{
+	device := &model.Device{
 		Name:            dto.Name,
 		Description:     dto.Description,
 		Manufacturer:    dto.Manufacturer,
@@ -44,6 +47,12 @@ func (dto *CreateNewDeviceDTO) AsModel() *model.Device {
 		ConnectionType:  domain.ConnectionType(dto.ConnectionType),
 		Location:        *dto.Location.AsModel(),
 	}
+
+	if dto.Metadata != nil {
+		device.Metadata = *dto.Metadata
+	}
+
+	return device
 }
 
 type UpdateDeviceDTO struct {
@@ -204,7 +213,7 @@ type TelemetryConfigDTO struct {
 	StorageQuota       int64   `json:"storage_quota_bytes"`
 	CompressionEnabled bool    `json:"compression_enabled"`
 	EncryptionEnabled  bool    `json:"encryption_enabled"`
-	AlertThresholds    JSONDTO `json:"alert_thresholds"`
+	AlertThresholds    JsonDTO `json:"alert_thresholds"`
 }
 
 type DeviceLocationDTO struct {
@@ -216,5 +225,3 @@ type DeviceLocationDTO struct {
 	Room           string  `json:"room,omitempty"`
 	Description    string  `json:"location_description,omitempty"`
 }
-
-type JSONDTO map[string]interface{}
