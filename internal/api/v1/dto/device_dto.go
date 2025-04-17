@@ -5,31 +5,29 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/vars7899/iots/internal/domain"
 	"github.com/vars7899/iots/internal/domain/model"
 	"github.com/vars7899/iots/internal/validatorz"
 	"gorm.io/datatypes"
 )
 
-type JsonDTO map[string]interface{}
-
 type CreateNewDeviceDTO struct {
-	Name            string          `json:"name" validate:"required,max=255"`
-	Description     string          `json:"description,omitempty" validate:"max=255"`
-	Manufacturer    string          `json:"manufacturer" validate:"required"`
-	ModelNumber     string          `json:"model_number" validate:"required"`
-	SerialNumber    string          `json:"serial_number" validate:"required"`
-	FirmwareVersion string          `json:"firmware_version" validate:"required"`
-	IPAddress       string          `json:"ip_address" validate:"omitempty,ip"`
-	MACAddress      string          `json:"mac_address" validate:"omitempty,max=17"`
-	ConnectionType  string          `json:"connection_type" validate:"required,connection_type"`
-	Location        GeoLocationDTO  `json:"location" validate:"required"`
-	Metadata        *datatypes.JSON `json:"metadata" validate:"omitempty"` // TODO: meta data can have maximum 100 fields
-
-	// TelemetryConfig TelemetryConfigDTO `json:"telemetry_config"`
-	// BroadcastConfig BroadcastConfigDTO `json:"broadcast_config"`
-	// Capabilities    []string           `json:"capabilities"`
-	// Tags            []string           `json:"tags"`
+	Name            string             `json:"name" validate:"required,max=255"`
+	Description     string             `json:"description,omitempty" validate:"max=255"`
+	Manufacturer    string             `json:"manufacturer" validate:"required"`
+	ModelNumber     string             `json:"model_number" validate:"required"`
+	SerialNumber    string             `json:"serial_number" validate:"required"`
+	FirmwareVersion string             `json:"firmware_version" validate:"required"`
+	IPAddress       string             `json:"ip_address" validate:"omitempty,ip"`
+	MACAddress      string             `json:"mac_address" validate:"omitempty,max=17"`
+	ConnectionType  string             `json:"connection_type" validate:"required,connection_type"`
+	Location        GeoLocationDTO     `json:"location" validate:"required"`
+	Metadata        *datatypes.JSON    `json:"metadata" validate:"omitempty"` // TODO: meta data can have maximum 100 fields
+	Tags            pq.StringArray     `json:"tags" validate:"omitempty,dive,min=1"`
+	Capabilities    pq.StringArray     `json:"capabilities" validate:"omitempty,dive,min=1"`
+	TelemetryConfig TelemetryConfigDTO `json:"telemetry_config"`
+	BroadcastConfig BroadcastConfigDTO `json:"broadcast_config"`
 }
 
 func (dto *CreateNewDeviceDTO) Validate() error { return validatorz.Validate.Struct(dto) }
@@ -46,6 +44,10 @@ func (dto *CreateNewDeviceDTO) AsModel() *model.Device {
 		MACAddress:      dto.MACAddress,
 		ConnectionType:  domain.ConnectionType(dto.ConnectionType),
 		Location:        *dto.Location.AsModel(),
+		Tags:            dto.Tags,
+		Capabilities:    dto.Capabilities,
+		TelemetryConfig: *dto.TelemetryConfig.AsModel(),
+		BroadcastConfig: *dto.BroadcastConfig.AsModel(),
 	}
 
 	if dto.Metadata != nil {
@@ -192,36 +194,59 @@ func (dto *UpdateDeviceStatusDTO) Validate() error {
 }
 
 type BroadcastConfigDTO struct {
-	BroadcastEnabled bool   `json:"broadcast_enabled"`
-	Protocol         string `json:"protocol"`
-	BrokerURL        string `json:"broker_url"`
-	Topic            string `json:"topic"`
-	QoS              int    `json:"qos"`
-	RetainMessages   bool   `json:"retain_messages"`
-	ClientID         string `json:"client_id"`
-	Username         string `json:"username"`
-	Password         string `json:"password"`
-	CertificatePath  string `json:"certificate_path"`
-	PrivateKeyPath   string `json:"private_key_path"`
+	BroadcastEnabled bool   `json:"broadcast_enabled" validate:"boolean"`
+	Protocol         string `json:"protocol" validate:"required,oneof=MQTT AMQP"`
+	BrokerURL        string `json:"broker_url" validate:"required,url"`
+	Topic            string `json:"topic" validate:"required"`
+	QoS              int    `json:"qos" validate:"oneof=0 1 2"`
+	RetainMessages   bool   `json:"retain_messages" validate:"boolean"`
+	ClientID         string `json:"client_id" validate:"required"`
+	Username         string `json:"username"  validate:"required"`
+	Password         string `json:"password"  validate:"required"`
+	CertificatePath  string `json:"certificate_path,omitempty"`
+	PrivateKeyPath   string `json:"private_key_path,omitempty"`
+}
+
+func (dto *BroadcastConfigDTO) Validate() error { return validatorz.Validate.Struct(dto) }
+
+func (dto *BroadcastConfigDTO) AsModel() *model.BroadcastConfig {
+	return &model.BroadcastConfig{
+		BroadcastEnabled: dto.BroadcastEnabled,
+		Protocol:         dto.Protocol,
+		BrokerURL:        dto.BrokerURL,
+		Topic:            dto.Topic,
+		QoS:              dto.QoS,
+		RetainMessages:   dto.RetainMessages,
+		ClientID:         dto.ClientID,
+		Username:         dto.Username,
+		Password:         dto.Password,
+		CertificatePath:  dto.CertificatePath,
+		PrivateKeyPath:   dto.PrivateKeyPath,
+	}
 }
 
 type TelemetryConfigDTO struct {
-	Enabled            bool    `json:"enabled"`
-	ReportingFrequency int     `json:"reporting_frequency_seconds"`
-	BatchSize          int     `json:"batch_size"`
-	RetentionPeriod    int     `json:"retention_period_days"`
-	StorageQuota       int64   `json:"storage_quota_bytes"`
-	CompressionEnabled bool    `json:"compression_enabled"`
-	EncryptionEnabled  bool    `json:"encryption_enabled"`
-	AlertThresholds    JsonDTO `json:"alert_thresholds"`
+	Enabled            bool           `json:"enabled"`
+	ReportingFrequency int            `json:"reporting_frequency_seconds"`
+	BatchSize          int            `json:"batch_size"`
+	RetentionPeriod    int            `json:"retention_period_days"`
+	StorageQuota       int64          `json:"storage_quota_bytes"`
+	CompressionEnabled bool           `json:"compression_enabled"`
+	EncryptionEnabled  bool           `json:"encryption_enabled"`
+	AlertThresholds    datatypes.JSON `json:"alert_thresholds"`
 }
 
-type DeviceLocationDTO struct {
-	Latitude       float64 `json:"latitude" validate:"required,latitude"`
-	Longitude      float64 `json:"longitude" validate:"required,longitude"`
-	IndoorLocation bool    `json:"indoor_location,omitempty" validate:"boolean"`
-	Building       string  `json:"building,omitempty"`
-	Floor          int     `json:"floor,omitempty" validate:"number"`
-	Room           string  `json:"room,omitempty"`
-	Description    string  `json:"location_description,omitempty"`
+func (dto *TelemetryConfigDTO) Validate() error { return validatorz.Validate.Struct(dto) }
+
+func (dto *TelemetryConfigDTO) AsModel() *model.TelemetryConfig {
+	return &model.TelemetryConfig{
+		Enabled:            dto.Enabled,
+		ReportingFrequency: dto.ReportingFrequency,
+		BatchSize:          dto.BatchSize,
+		RetentionPeriod:    dto.RetentionPeriod,
+		StorageQuota:       dto.StorageQuota,
+		CompressionEnabled: dto.CompressionEnabled,
+		EncryptionEnabled:  dto.EncryptionEnabled,
+		AlertThresholds:    dto.AlertThresholds,
+	}
 }

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/vars7899/iots/internal/domain"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -28,36 +29,34 @@ type Device struct {
 	DeletedAt       gorm.DeletedAt        `gorm:"index" json:"-"`
 	LastConnected   *time.Time            `json:"last_connected"`
 	Metadata        datatypes.JSON        `gorm:"type:jsonb" json:"metadata"`
+	Tags            pq.StringArray        `gorm:"type:text[]" json:"tags"`
+	Capabilities    pq.StringArray        `gorm:"type:text[]" json:"capabilities"`
+	TelemetryConfig TelemetryConfig       `gorm:"embedded" json:"telemetry_config"`
+	BroadcastConfig BroadcastConfig       `gorm:"embedded" json:"broadcast_config"`
 	// Sensors         []sensor.Sensor `gorm:"foreignKey:DeviceID" json:"sensors"`
-	// TelemetryConfig TelemetryConfig `gorm:"embedded" json:"telemetry_config"`
-	// BroadcastConfig BroadcastConfig `gorm:"embedded" json:"broadcast_config"`
-	// Capabilities    pq.StringArray  `gorm:"type:text[] json:"capabilities""` // array of capability identifiers
-	// Tags            pq.StringArray  `gorm:"type:text[] json:"tags""`
 }
 
-// TelemetryConfig represents configuration for device telemetry
 type TelemetryConfig struct {
-	Enabled            bool  `json:"enabled" gorm:"default:true"`
-	ReportingFrequency int   `json:"reporting_frequency_seconds" gorm:"default:60"` // in seconds
-	BatchSize          int   `json:"batch_size" gorm:"default:1"`
-	RetentionPeriod    int   `json:"retention_period_days" gorm:"default:30"` // in days
-	StorageQuota       int64 `json:"storage_quota_bytes"`                     // in bytes
-	CompressionEnabled bool  `json:"compression_enabled" gorm:"default:false"`
-	EncryptionEnabled  bool  `json:"encryption_enabled" gorm:"default:false"`
-	AlertThresholds    JSON  `json:"alert_thresholds" gorm:"type:jsonb"` // flexible thresholds configuration
+	Enabled            bool           `gorm:"default:true" json:"enabled"`
+	ReportingFrequency int            `gorm:"default:60" json:"reporting_frequency_seconds"` // in seconds
+	BatchSize          int            `gorm:"default:1" json:"batch_size"`
+	RetentionPeriod    int            `gorm:"default:30" json:"retention_period_days"` // in days
+	StorageQuota       int64          `json:"storage_quota_bytes"`                     // in bytes
+	CompressionEnabled bool           `gorm:"default:false" json:"compression_enabled"`
+	EncryptionEnabled  bool           `gorm:"default:false" json:"encryption_enabled"`
+	AlertThresholds    datatypes.JSON `gorm:"type:jsonb" json:"alert_thresholds"` // flexible thresholds configuration
 }
 
-// BroadcastConfig represents configuration for device broadcasting capabilities
 type BroadcastConfig struct {
-	BroadcastEnabled bool   `json:"broadcast_enabled" gorm:"default:false"`
+	BroadcastEnabled bool   `gorm:"default:false" json:"broadcast_enabled"`
 	Protocol         string `json:"protocol"` // MQTT, AMQP, etc.
 	BrokerURL        string `json:"broker_url"`
 	Topic            string `json:"topic"`
-	QoS              int    `json:"qos" gorm:"default:0"` // Quality of Service level
-	RetainMessages   bool   `json:"retain_messages" gorm:"default:false"`
+	QoS              int    `gorm:"default:0" json:"qos"` // Quality of Service level
+	RetainMessages   bool   `gorm:"default:false" json:"retain_messages"`
 	ClientID         string `json:"client_id"`
 	Username         string `json:"username"`
-	Password         string `json:"password"`
+	Password         string `json:"-"`
 	CertificatePath  string `json:"certificate_path"`
 	PrivateKeyPath   string `json:"private_key_path"`
 }
