@@ -7,7 +7,6 @@ import (
 
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/vars7899/iots/internal/domain/model"
-	"github.com/vars7899/iots/internal/domain/sensor"
 	"gorm.io/gorm"
 )
 
@@ -24,9 +23,9 @@ func SeedSensorData(db *gorm.DB, count int) error {
 			DeviceID: gofakeit.UUID(),
 			Name:     gofakeit.Name(),
 			Type: model.SensorType(gofakeit.RandomString([]string{
-				string(sensor.TemperatureSensor),
-				string(sensor.HumiditySensor),
-				string(sensor.MotionSensor),
+				string(model.TemperatureSensor),
+				string(model.HumiditySensor),
+				string(model.MotionSensor),
 			})),
 			Unit:      gofakeit.RandomString([]string{"°C", "%", "m/s"}),
 			Precision: gofakeit.Number(0, 2),
