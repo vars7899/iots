@@ -50,17 +50,25 @@ const (
 	ErrCodeUpdateLogin  ErrorCode = "ERR-4003"
 
 	// Database errors (5xxx)
-	ErrCodeDBQuery      ErrorCode = "ERR-5000"
-	ErrCodeDBInsert     ErrorCode = "ERR-5001"
-	ErrCodeDBUpdate     ErrorCode = "ERR-5002"
-	ErrCodeDBDelete     ErrorCode = "ERR-5003"
-	ErrCodeDBConnect    ErrorCode = "ERR-5004"
-	ErrCodeDuplicateKey ErrorCode = "ERR-5005"
+	ErrCodeDBQuery         ErrorCode = "ERR-5000"
+	ErrCodeDBInsert        ErrorCode = "ERR-5001"
+	ErrCodeDBUpdate        ErrorCode = "ERR-5002"
+	ErrCodeDBDelete        ErrorCode = "ERR-5003"
+	ErrCodeDBConnect       ErrorCode = "ERR-5004"
+	ErrCodeDuplicateKey    ErrorCode = "ERR-5005"
+	ErrCodeDBForeignKey    ErrorCode = "ERR-5006"
+	ErrCodeInvalidData     ErrorCode = "ERR-5007"
+	ErrCodeDBResourceLimit ErrorCode = "ERR-5008"
+	ErrCodeDBDeadlock      ErrorCode = "ERR-5009"
+	ErrCodeDBConflict      ErrorCode = "ERR-5010"
+	ErrCodeDBTimeout       ErrorCode = "ERR-5011"
 
 	// Timeout errors (6xxx)
 	ErrCodeTimeout ErrorCode = "ERR-6000"
 
+	// Context errors (7xxx)
 	ErrCodeContextCancelled ErrorCode = "ERR-7000"
+	ErrCodeContextTimeout             = "ERR-7001"
 )
 
 // CodeMessages maps error codes to default messages (can be overridden in i18n files)
@@ -91,17 +99,25 @@ var CodeMessages = map[ErrorCode]string{
 	ErrCodeUpdateLogin:  "Could not update user session",
 
 	// Database errors
-	ErrCodeDBQuery:      "Database query failed",
-	ErrCodeDBInsert:     "Failed to insert into database",
-	ErrCodeDBUpdate:     "Failed to update database",
-	ErrCodeDBDelete:     "Failed to delete from database",
-	ErrCodeDBConnect:    "Failed to connect to database",
-	ErrCodeDuplicateKey: "Duplicate key value violates unique constraint",
+	ErrCodeDBQuery:         "Database query failed",
+	ErrCodeDBInsert:        "Failed to insert into database",
+	ErrCodeDBUpdate:        "Failed to update database",
+	ErrCodeDBDelete:        "Failed to delete from database",
+	ErrCodeDBConnect:       "Failed to connect to database",
+	ErrCodeDuplicateKey:    "Duplicate key value violates unique constraint",
+	ErrCodeDBForeignKey:    "Invalid Foreign key reference",
+	ErrCodeInvalidData:     "Invalid or corrupt data",
+	ErrCodeDBResourceLimit: "database resource limit reached",
+	ErrCodeDBDeadlock:      "database deadlock conflict",
+	ErrCodeDBConflict:      "database serialization conflict",
+	ErrCodeDBTimeout:       "database timeout",
 
 	// Timeout errors
 	ErrCodeTimeout: "Request deadline exceeded",
 
+	// Context errors
 	ErrCodeContextCancelled: "operation ended due to context cancellation",
+	ErrCodeContextTimeout:   "operation ended due to context timeout",
 }
 
 // HTTP status mapping for error codes
@@ -132,12 +148,21 @@ var CodeStatus = map[ErrorCode]int{
 	ErrCodeUpdateLogin:  StatusServiceUnavailable,
 
 	// Database errors
-	ErrCodeDBQuery:      StatusInternalServerError,
-	ErrCodeDBInsert:     StatusInternalServerError,
-	ErrCodeDBUpdate:     StatusInternalServerError,
-	ErrCodeDBDelete:     StatusInternalServerError,
-	ErrCodeDBConnect:    StatusServiceUnavailable,
-	ErrCodeDuplicateKey: StatusConflict,
+	ErrCodeDBQuery:         StatusInternalServerError,
+	ErrCodeDBInsert:        StatusInternalServerError,
+	ErrCodeDBUpdate:        StatusInternalServerError,
+	ErrCodeDBDelete:        StatusInternalServerError,
+	ErrCodeDBConnect:       StatusServiceUnavailable,
+	ErrCodeDuplicateKey:    StatusConflict,
+	ErrCodeDBForeignKey:    StatusInternalServerError,
+	ErrCodeInvalidData:     StatusBadRequest,
+	ErrCodeDBResourceLimit: StatusInternalServerError,
+	ErrCodeDBDeadlock:      StatusInternalServerError,
+	ErrCodeDBConflict:      StatusInternalServerError,
+	ErrCodeDBTimeout:       StatusInternalServerError,
+
+	// Context errors
+	ErrCodeContextTimeout: StatusInternalServerError,
 }
 
 // AppError represents a standardized error for the application
@@ -373,16 +398,23 @@ var (
 	ErrUpdateLogin  = New(ErrCodeUpdateLogin)
 
 	// DB errors
-	ErrDBQuery      = New(ErrCodeDBQuery)
-	ErrDBInsert     = New(ErrCodeDBInsert)
-	ErrDBUpdate     = New(ErrCodeDBUpdate)
-	ErrDBDelete     = New(ErrCodeDBDelete)
-	ErrDBConnect    = New(ErrCodeDBConnect)
-	ErrDuplicateKey = New(ErrCodeDuplicateKey)
+	ErrDBQuery         = New(ErrCodeDBQuery)
+	ErrDBInsert        = New(ErrCodeDBInsert)
+	ErrDBUpdate        = New(ErrCodeDBUpdate)
+	ErrDBDelete        = New(ErrCodeDBDelete)
+	ErrDBConnect       = New(ErrCodeDBConnect)
+	ErrDuplicateKey    = New(ErrCodeDuplicateKey)
+	ErrDBForeignKey    = New(ErrCodeDBForeignKey)
+	ErrDBInvalidData   = New(ErrCodeInvalidData)
+	ErrDBResourceLimit = New(ErrCodeDBResourceLimit)
+	ErrDBDeadlock      = New(ErrCodeDBDeadlock)
+	ErrDBConflict      = New(ErrCodeDBConflict)
+	ErrDBTimeout       = New(ErrCodeDBTimeout)
 
 	// Timeout errors
 	ErrTimeout = New(ErrCodeTimeout)
 
 	// Context errors
 	ErrContextCancelled = New(ErrCodeContextCancelled)
+	ErrContextTimeout   = New(ErrCodeContextTimeout)
 )

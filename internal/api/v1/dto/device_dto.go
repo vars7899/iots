@@ -58,7 +58,6 @@ func (dto *CreateNewDeviceDTO) AsModel() *model.Device {
 }
 
 type UpdateDeviceDTO struct {
-	ID              string  `json:"id" validate:"required,uuid"`
 	Name            *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	Description     *string `json:"description,omitempty" validate:"omitempty"`
 	Manufacturer    *string `json:"manufacturer,omitempty" validate:"omitempty"`
@@ -74,9 +73,6 @@ func (dto *UpdateDeviceDTO) Validate() error { return validatorz.Validate.Struct
 
 func (dto *UpdateDeviceDTO) ToDevice() *model.Device {
 	device := &model.Device{}
-
-	deviceID, _ := uuid.Parse(dto.ID)
-	device.ID = deviceID
 
 	if dto.Name != nil {
 		device.Name = *dto.Name

@@ -44,8 +44,8 @@ func (s *DeviceService) GetDeviceByID(ctx context.Context, deviceID uuid.UUID) (
 	return deviceExist, nil
 }
 
-func (s *DeviceService) UpdateDevice(ctx context.Context, deviceID uuid.UUID, deviceUpdates *model.Device) (*model.Device, error) {
-	updatedDevice, err := s.deviceRepo.Update(ctx, deviceID, deviceUpdates)
+func (s *DeviceService) UpdateDevice(ctx context.Context, deviceUpdates *model.Device) (*model.Device, error) {
+	updatedDevice, err := s.deviceRepo.Update(ctx, deviceUpdates)
 	if err != nil {
 		return nil, ServiceError(err, apperror.ErrDBUpdate)
 	}

@@ -14,7 +14,7 @@ import (
 type DeviceRepository interface {
 	Create(ctx context.Context, device *model.Device) (*model.Device, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Device, error)
-	Update(ctx context.Context, deviceID uuid.UUID, device *model.Device) (*model.Device, error)
+	Update(ctx context.Context, device *model.Device) (*model.Device, error)
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 
 	// Query operations

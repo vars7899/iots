@@ -60,13 +60,36 @@ func JSON[T any](c echo.Context, code int, data T, metadata ...map[string]interf
 func Error(c echo.Context, err error) error {
 	logger := getLogger(c)
 
+	if httpErr, ok := err.(*echo.HTTPError); ok {
+		if httpErr.Code == http.StatusNotFound {
+			return c.JSON(http.StatusNotFound, ErrorResponse{
+				Response: Response{
+					Success:   false,
+					Timestamp: time.Now().UTC(),
+					TraceID:   getTraceID(c),
+				},
+				StatusCode: http.StatusNotFound,
+				ErrorCode:  string(apperror.ErrCodeNotFound),
+				Message:    "Resource not found",
+			})
+		}
+	}
+
 	// Convert to AppError if needed
 	appError := apperror.FromError(err)
 	if appError == nil {
-		return c.NoContent(http.StatusInternalServerError)
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Response: Response{
+				Success:   false,
+				Timestamp: time.Now().UTC(),
+				TraceID:   getTraceID(c),
+			},
+			StatusCode: http.StatusInternalServerError,
+			ErrorCode:  string(apperror.ErrCodeInternal),
+			Message:    "An internal server error occurred",
+		})
 	}
 
-	// Add request path and trace ID if not already set
 	if appError.Path == "" {
 		appError = appError.WithPath(c.Request().URL.Path)
 	}
@@ -75,12 +98,6 @@ func Error(c echo.Context, err error) error {
 	if appError.TraceID == "" && traceID != "" {
 		appError = appError.WithTraceID(traceID)
 	}
-
-	// msg, ok := apperror.CodeMessages[appError.Code]
-	// if !ok {
-	// 	msg = "oops!!! something went wrong"
-	// }
-	// appError = appError.WithMessage(msg)
 
 	// Log the error with details for debugging
 	logFields := []zap.Field{

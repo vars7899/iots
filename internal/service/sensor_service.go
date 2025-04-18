@@ -2,57 +2,51 @@ package service
 
 import (
 	"context"
-	"errors"
 
-	"github.com/vars7899/iots/internal/domain/sensor"
+	"github.com/google/uuid"
+	"github.com/vars7899/iots/internal/api/v1/dto"
+	"github.com/vars7899/iots/internal/domain"
+	"github.com/vars7899/iots/internal/domain/model"
 	"github.com/vars7899/iots/internal/repository"
-	"gorm.io/gorm"
+	"github.com/vars7899/iots/pkg/apperror"
+	"github.com/vars7899/iots/pkg/pagination"
 )
 
 type SensorService struct {
-	repo repository.SensorRepository
+	sensorRepo repository.SensorRepository
 }
 
 func NewSensorService(r repository.SensorRepository) *SensorService {
-	return &SensorService{repo: r}
+	return &SensorService{sensorRepo: r}
 }
 
-func (s *SensorService) CreateSensor(ctx context.Context, sensor *sensor.Sensor) error {
-	sensor.StampNew()
-	return s.repo.Create(ctx, sensor)
+func (s *SensorService) CreateSensor(ctx context.Context, sensor *model.Sensor) (*model.Sensor, error) {
+	if sensor.ID != uuid.Nil {
+		return nil, apperror.ErrBadRequest.WithMessagef("cannot specify ID when creating a %s", domain.EntitySensor)
+	}
+	sensor.Status = domain.Pending
+	return s.sensorRepo.Create(ctx, sensor)
 }
 
-func (s *SensorService) GetSensor(ctx context.Context, sensorID string) (*sensor.Sensor, error) {
-	sensorData, err := s.repo.GetByID(ctx, sensorID)
+func (s *SensorService) GetSensor(ctx context.Context, sensorID uuid.UUID) (*model.Sensor, error) {
+	sensorData, err := s.sensorRepo.GetByID(ctx, sensorID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, sensor.ErrSensorNotFound
-		}
 		return nil, err
 	}
 	return sensorData, nil
 }
 
-func (s *SensorService) UpdateSensor(ctx context.Context, sensor *sensor.Sensor) error {
-	sensor.StampUpdate()
-	return s.repo.Update(ctx, sensor)
+func (s *SensorService) UpdateSensor(ctx context.Context, sensorData *model.Sensor) (*model.Sensor, error) {
+	return s.sensorRepo.Update(ctx, sensorData)
 }
 
-func (s *SensorService) DeleteSensor(ctx context.Context, sensorID string) error {
-	if err := s.repo.Delete(ctx, sensorID); err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return sensor.ErrSensorNotFound
-		}
-	}
-	return nil
+func (s *SensorService) DeleteSensor(ctx context.Context, sensorID uuid.UUID) error {
+	return s.sensorRepo.Delete(ctx, sensorID)
 }
 
-func (s *SensorService) ListSensor(ctx context.Context, sensorFilter sensor.SensorFilter) ([]*sensor.Sensor, error) {
-	sensorList, err := s.repo.List(ctx, sensorFilter)
+func (s *SensorService) ListSensor(ctx context.Context, sensorFilter *dto.SensorFilter, paginationConfig *pagination.Pagination) ([]*model.Sensor, error) {
+	sensorList, err := s.sensorRepo.List(ctx, sensorFilter, paginationConfig)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, sensor.ErrSensorNotFound
-		}
 		return nil, err
 	}
 	return sensorList, nil

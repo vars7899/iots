@@ -18,7 +18,7 @@ import (
 
 func main() {
 	validatorz.InitValidator()
-	logger.InitLogger(false)
+	baseLogger := logger.InitLogger(false)
 
 	postgresConfig, err := config.Load(".env.dev")
 	if err != nil {
@@ -36,14 +36,14 @@ func main() {
 	}
 
 	// Initialize repositories
-	sensorRepo := postgres.NewSensorRepositoryPostgres(postgresDB)
+	sensorRepo := postgres.NewSensorRepositoryPostgres(postgresDB, baseLogger)
 	userRepo := postgres.NewUserRepositoryPostgres(postgresDB)
 	deviceRepo := postgres.NewDeviceRepositoryPostgres(postgresDB)
 
 	// Initialize services
 	sensorService := service.NewSensorService(sensorRepo)
 	userService := service.NewUserService(userRepo)
-	deviceService := service.NewDeviceService(deviceRepo, logger.Lgr)
+	deviceService := service.NewDeviceService(deviceRepo, baseLogger)
 	tokenService := token.NewJwtTokenService(os.Getenv("JWT_ACCESS_SECRET"), os.Getenv("JWT_REFRESH_SECRET"), 15*time.Hour, 24*7*time.Hour)
 
 	// Create dependency injection container
@@ -58,7 +58,7 @@ func main() {
 	e := echo.New()
 
 	// Register routes with DIs
-	api_v1.RegisterRoutes(e, deps, logger.Lgr)
+	api_v1.RegisterRoutes(e, deps, baseLogger)
 
 	// Start server
 	port := os.Getenv("PORT")

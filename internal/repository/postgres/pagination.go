@@ -8,8 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vars7899/iots/internal/repository"
-	appError "github.com/vars7899/iots/pkg/apperror"
+	"github.com/vars7899/iots/pkg/apperror"
 	"github.com/vars7899/iots/pkg/pagination"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -38,7 +37,7 @@ func DefaultQueryOptions() *QueryOptions {
 }
 
 func FindWithPagination[T any](ctx context.Context, db *gorm.DB, p *pagination.Pagination, queryBuilder func(*gorm.DB) *gorm.DB, log *zap.Logger, opts ...*QueryOptions) ([]T, int64, error) {
-	op := "postgres.FindWithPagination"
+
 	start := time.Now()
 
 	var modelInstance T
@@ -100,9 +99,9 @@ func FindWithPagination[T any](ctx context.Context, db *gorm.DB, p *pagination.P
 
 		select {
 		case err = <-countErrChan:
-			return nil, 0, repository.HandleRepoError(op, err, appError.ErrDBQuery, log)
+			return nil, 0, apperror.MapDBError(err, modelType)
 		case <-ctx.Done():
-			return nil, 0, repository.HandleRepoError(op, err, appError.ErrTimeout, log)
+			return nil, 0, apperror.ErrContextTimeout.WithMessage("query timed out before completion due to context timeout").Wrap(err)
 		}
 
 	}
@@ -132,10 +131,10 @@ func FindWithPagination[T any](ctx context.Context, db *gorm.DB, p *pagination.P
 					// Return empty slice instead of error for "not found"
 					return []T{}, 0, nil
 				}
-				return nil, 0, repository.HandleRepoError(op, err, appError.ErrDBQuery, log)
+				return nil, 0, apperror.MapDBError(err, modelType)
 			}
 		case <-ctx.Done():
-			return nil, 0, repository.HandleRepoError(op, ctx.Err(), appError.ErrTimeout, log)
+			return nil, 0, apperror.ErrContextTimeout.WithMessage("query timed out before completion due to context timeout").Wrap(err)
 		}
 	}
 

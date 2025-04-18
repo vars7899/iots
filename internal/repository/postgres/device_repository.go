@@ -50,14 +50,13 @@ func (r *DeviceRepositoryPostgres) Create(ctx context.Context, deviceData *model
 func (r *DeviceRepositoryPostgres) GetByID(ctx context.Context, deviceID uuid.UUID) (*model.Device, error) {
 	var d model.Device
 	if err := r.db.WithContext(ctx).Where("id = ?", deviceID).First(&d).Error; err != nil {
-		return nil, apperror.HandleDBError(err)
+		return nil, apperror.MapDBError(err, domain.EntityDevice)
 	}
 	return &d, nil
 }
 
-func (r *DeviceRepositoryPostgres) Update(ctx context.Context, deviceID uuid.UUID, deviceData *model.Device) (*model.Device, error) {
-	tx := r.db.WithContext(ctx).Model(&model.Device{}).Clauses(clause.Returning{}).Where("id = ?", deviceID).Select("*").Updates(&deviceData)
-	fmt.Println(tx.Statement.SQL.String())
+func (r *DeviceRepositoryPostgres) Update(ctx context.Context, deviceData *model.Device) (*model.Device, error) {
+	tx := r.db.WithContext(ctx).Model(&model.Device{}).Clauses(clause.Returning{}).Where("id = ?", deviceData.ID).Updates(&deviceData)
 
 	if tx.Error != nil {
 		return nil, repository.HandleRepoError("update resource", tx.Error, apperror.ErrDBUpdate, r.log)

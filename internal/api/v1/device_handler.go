@@ -128,7 +128,10 @@ func (h *DeviceHandler) UpdateDevice(c echo.Context) error {
 		return err
 	}
 
-	updatedDevice, err := h.DeviceService.UpdateDevice(c.Request().Context(), deviceID, dto.ToDevice())
+	deviceUpdates := dto.ToDevice()
+	deviceUpdates.ID = deviceID
+
+	updatedDevice, err := h.DeviceService.UpdateDevice(c.Request().Context(), deviceUpdates)
 	if err != nil {
 		return apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate, fmt.Sprintf("failed to update device with ID %s", reqID)).WithPath(reqPath)
 	}

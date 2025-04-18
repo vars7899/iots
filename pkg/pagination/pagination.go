@@ -10,10 +10,10 @@ type Pagination struct {
 }
 
 func (p *Pagination) GetOffset() int {
-	if p.Page > 0 {
-		return p.Page * p.PageSize
+	if p.Page < 1 {
+		p.Page = 1
 	}
-	return 0
+	return (p.Page - 1) * p.PageSize
 }
 
 func (p *Pagination) GetLimit() int {

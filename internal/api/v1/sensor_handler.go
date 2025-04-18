@@ -1,124 +1,154 @@
 package v1
 
 import (
+	"fmt"
+	"net/http"
+
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/vars7899/iots/internal/api/v1/dto"
+	"github.com/vars7899/iots/internal/domain"
 	"github.com/vars7899/iots/internal/service"
+	"github.com/vars7899/iots/pkg/apperror"
+	"github.com/vars7899/iots/pkg/logger"
+	"github.com/vars7899/iots/pkg/response"
+	"github.com/vars7899/iots/pkg/utils"
+	"go.uber.org/zap"
 )
 
 type SensorHandler struct {
 	SensorService *service.SensorService
+	logger        *zap.Logger
 }
 
-func NewSensorHandler(dep APIDependencies) *SensorHandler {
-	return &SensorHandler{SensorService: dep.SensorService}
+func NewSensorHandler(dep APIDependencies, baseLogger *zap.Logger) *SensorHandler {
+	return &SensorHandler{SensorService: dep.SensorService, logger: logger.NewNamedZapLogger(baseLogger, "SensorHandler")}
 }
 
 func (h SensorHandler) RegisterRoutes(e *echo.Group) {
-	// e.GET("", h.ListSensor)
-	// e.POST("", h.CreateSensor)
-	// e.GET("/:id", h.GetSensor)
-	// e.DELETE("/:id", h.DeleteSensor)
-	// e.PATCH("/:id", h.UpdateSensor)
+	e.POST("", h.CreateSensor)
+	e.GET("", h.ListSensor)
+	e.GET("/:id", h.GetSensor)
+	e.DELETE("/:id", h.DeleteSensor)
+	e.PATCH("/:id", h.UpdateSensor)
 }
 
-// func (h SensorHandler) ListSensor(c echo.Context) error {
-// 	var queryParams sensor.SensorQueryParamsDTO
-// 	if err := c.Bind(&queryParams); err != nil {
-// 		return response.Error(c, http.StatusBadRequest, "invalid query parameters")
-// 	}
+func (h SensorHandler) CreateSensor(c echo.Context) error {
+	var dto dto.CreateSensorDTO
+	reqPath := utils.GetRequestUrlPath(c)
 
-// 	if err := queryParams.Validate(); err != nil {
-// 		return response.Error(c, http.StatusBadRequest, err.Error())
-// 	}
+	// Bind body request and validate fields
+	if err := utils.BindAndValidate(c, &dto); err != nil {
+		return err
+	}
 
-// 	filter, err := queryParams.ToFilter()
-// 	if err != nil {
-// 		return response.Error(c, http.StatusBadRequest, "invalid filter parameters")
-// 	}
+	createdSensor, err := h.SensorService.CreateSensor(c.Request().Context(), dto.AsModel())
+	if err != nil {
+		return apperror.ErrorHandler(err, apperror.ErrCodeDBInsert, fmt.Sprintf("failed to create %s", domain.EntitySensor)).WithPath(reqPath).Wrap(err)
+	}
 
-// 	sensorList, err := h.SensorService.ListSensor(c.Request().Context(), filter)
-// 	if err != nil {
-// 		return h.handlerError(c, err)
-// 	}
+	return response.JSON(c, http.StatusCreated, echo.Map{
+		"message": "sensor created successfully",
+		"sensor":  createdSensor,
+	})
+}
 
-// 	return response.JSON(c, http.StatusOK, sensorList)
-// }
+func (h SensorHandler) GetSensor(c echo.Context) error {
+	reqID := c.Param("id")
+	reqPath := utils.GetRequestUrlPath(c)
 
-// func (h SensorHandler) GetSensor(c echo.Context) error {
-// 	ctx := c.Request().Context()
-// 	sensorID := c.Param("id")
+	sensorID, err := uuid.Parse(reqID)
+	if err != nil {
+		return apperror.ErrBadRequest.WithMessagef("invalid %s ID format", domain.EntitySensor).WithDetails(echo.Map{
+			"sensor_id": reqID,
+			"error":     err.Error(),
+		}).WithPath(reqPath).Wrap(err)
+	}
 
-// 	sensorData, err := h.SensorService.GetSensor(ctx, sensorID)
+	sensorData, err := h.SensorService.GetSensor(c.Request().Context(), sensorID)
+	if err != nil {
+		return apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, fmt.Sprintf("failed to retrieve %s with ID %s", domain.EntitySensor, reqID)).WithPath(reqPath)
+	}
+	return response.JSON(c, int(http.StatusOK), echo.Map{
+		"sensor": sensorData,
+	})
+}
 
-// 	if err != nil {
-// 		return h.handlerError(c, err)
-// 	}
-// 	return response.JSON(c, int(http.StatusOK), sensorData)
-// }
+func (h SensorHandler) DeleteSensor(c echo.Context) error {
+	reqID := c.Param("id")
+	reqPath := utils.GetRequestUrlPath(c)
 
-// func (h SensorHandler) DeleteSensor(c echo.Context) error {
-// 	ctx := c.Request().Context()
-// 	sensorID := c.Param("id")
+	sensorID, err := uuid.Parse(reqID)
+	if err != nil {
+		return apperror.ErrBadRequest.WithMessagef("invalid %s ID format", domain.EntitySensor).WithDetails(echo.Map{
+			"sensor_id": reqID,
+			"error":     err.Error(),
+		}).WithPath(reqPath).Wrap(err)
+	}
 
-// 	err := h.SensorService.DeleteSensor(ctx, sensorID)
-// 	if err != nil {
-// 		return h.handlerError(c, err)
-// 	}
-// 	return response.JSON(c, http.StatusOK, map[string]interface{}{
-// 		"sensor_id": sensorID,
-// 		"message":   "sensor deleted successfully",
-// 	})
-// }
+	if err := h.SensorService.DeleteSensor(c.Request().Context(), sensorID); err != nil {
+		return apperror.ErrorHandler(err, apperror.ErrCodeDBDelete, fmt.Sprintf("failed to delete %s with ID %s", domain.EntitySensor, reqID)).WithPath(reqPath)
+	}
+	return response.JSON(c, http.StatusOK, map[string]interface{}{
+		"sensor_id": sensorID,
+		"message":   "sensor deleted successfully",
+	})
+}
 
-// func (h SensorHandler) CreateSensor(c echo.Context) error {
-// 	var dto sensor.CreateSensorDTO
-// 	if err := c.Bind(&dto); err != nil {
-// 		return response.Error(c, http.StatusBadRequest, "invalid request body")
-// 	}
+func (h SensorHandler) UpdateSensor(c echo.Context) error {
+	var dto dto.UpdateSensorDTO
 
-// 	if err := dto.Validate(); err != nil {
-// 		return response.Error(c, http.StatusBadRequest, err.Error())
-// 	}
+	// Bind body request and validate fields
+	if err := utils.BindAndValidate(c, &dto); err != nil {
+		return err
+	}
 
-// 	_sensorData := dto.ToSensorModel()
-// 	if err := h.SensorService.CreateSensor(c.Request().Context(), &_sensorData); err != nil {
-// 		h.handlerError(c, err)
-// 	}
+	reqID := c.Param("id")
+	reqPath := utils.GetRequestUrlPath(c)
 
-// 	return response.JSON(c, http.StatusCreated, map[string]interface{}{
-// 		"message": "sensor created successfully",
-// 	})
-// }
+	sensorID, err := uuid.Parse(reqID)
+	if err != nil {
+		return apperror.ErrBadRequest.WithMessagef("invalid %s ID format", domain.EntitySensor).WithDetails(echo.Map{
+			"sensor_id": reqID,
+			"error":     err.Error(),
+		}).WithPath(reqPath).Wrap(err)
+	}
 
-// func (h SensorHandler) UpdateSensor(c echo.Context) error {
-// 	var dto sensor.UpdateSensorDTO
-// 	if err := c.Bind(&dto); err != nil {
-// 		return response.Error(c, http.StatusBadRequest, "invalid request body")
+	sensorUpdates := dto.AsModel()
+	sensorUpdates.ID = sensorID // bind id
 
-// 	}
-// 	if err := dto.Validate(); err != nil {
-// 		return response.Error(c, http.StatusBadRequest, err.Error())
-// 	}
+	sensorData, err := h.SensorService.UpdateSensor(c.Request().Context(), sensorUpdates)
+	if err != nil {
+		return apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate, fmt.Sprintf("failed to update %s with ID %s", domain.EntitySensor, reqID)).WithPath(reqPath)
+	}
 
-// 	sensorID := c.Param("id")
+	return response.JSON(c, http.StatusOK, map[string]interface{}{
+		"message": "sensor updated successfully",
+		"sensor":  sensorData,
+	})
+}
 
-// 	// Fetch the existing sensor
-// 	existing, err := h.SensorService.GetSensor(c.Request().Context(), sensorID)
-// 	if err != nil {
-// 		return h.handlerError(c, err)
-// 	}
+func (h SensorHandler) ListSensor(c echo.Context) error {
+	var dto dto.SensorQueryParamsDTO
+	reqPath := utils.GetRequestUrlPath(c)
 
-// 	dto.ApplyUpdates(existing)
+	// Bind body request and validate fields
+	if err := utils.BindAndValidate(c, &dto); err != nil {
+		return err
+	}
 
-// 	if err := h.SensorService.UpdateSensor(c.Request().Context(), existing); err != nil {
-// 		return h.handlerError(c, err)
-// 	}
+	paginationConfig, filterParams, err := dto.AsModel()
+	if err != nil {
+		return apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, fmt.Sprintf("failed to list %s", domain.EntitySensor)).WithPath(reqPath)
+	}
 
-// 	return response.JSON(c, http.StatusOK, map[string]interface{}{
-// 		"sensor_id": sensorID,
-// 		"message":   "sensor updated successfully",
-// 	})
-// }
+	sensorList, err := h.SensorService.ListSensor(c.Request().Context(), filterParams, paginationConfig)
+	if err != nil {
+		return apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, fmt.Sprintf("failed to list %s", domain.EntitySensor)).WithPath(reqPath)
+	}
+
+	return response.JSON(c, http.StatusOK, sensorList)
+}
 
 // func (h SensorHandler) handlerError(c echo.Context, err error) error {
 // 	if errors.Is(err, sensor.ErrInvalidSensorID) {
