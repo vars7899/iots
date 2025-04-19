@@ -1,6 +1,6 @@
 package dto
 
-import "github.com/vars7899/iots/internal/validatorz"
+import "github.com/vars7899/iots/internal/validation"
 
 type RegisterUserRequestDTO struct {
 	Email       string `json:"email" validate:"required,email,max=100"`
@@ -9,7 +9,7 @@ type RegisterUserRequestDTO struct {
 	Password    string `json:"password" validate:"required,min=8,max=100"`
 }
 
-func (dto RegisterUserRequestDTO) Validate() error { return validatorz.Validate.Struct(dto) }
+func (dto RegisterUserRequestDTO) Validate() error { return validation.Validate.Struct(dto) }
 
 type LoginUserRequestDTO struct {
 	Email       string `json:"email,omitempty" validate:"omitempty,email"`
@@ -18,4 +18,4 @@ type LoginUserRequestDTO struct {
 	Password    string `json:"password" validate:"required,min=8"`
 }
 
-func (dto LoginUserRequestDTO) Validate() error { return validatorz.Validate.Struct(dto) }
+func (dto LoginUserRequestDTO) Validate() error { return validation.Validate.Struct(dto) }

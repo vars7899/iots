@@ -1,0 +1,17 @@
+server:
+  port: "8080"
+  shutdown_timeout: 10s
+  hide_banner: true
+  hide_port: true
+postgres:
+  db_user: ""
+  db_password: ""
+  db_name: ""
+  db_host: ""
+  db_port: ""
+jwt:
+  access_secret: ""
+  refresh_secret: ""
+  access_token_ttl: 1h
+  refresh_token_ttl: 24h
+

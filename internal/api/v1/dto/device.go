@@ -8,7 +8,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/vars7899/iots/internal/domain"
 	"github.com/vars7899/iots/internal/domain/model"
-	"github.com/vars7899/iots/internal/validatorz"
+	"github.com/vars7899/iots/internal/validation"
 	"gorm.io/datatypes"
 )
 
@@ -30,7 +30,7 @@ type CreateNewDeviceDTO struct {
 	BroadcastConfig BroadcastConfigDTO `json:"broadcast_config"`
 }
 
-func (dto *CreateNewDeviceDTO) Validate() error { return validatorz.Validate.Struct(dto) }
+func (dto *CreateNewDeviceDTO) Validate() error { return validation.Validate.Struct(dto) }
 
 func (dto *CreateNewDeviceDTO) AsModel() *model.Device {
 	device := &model.Device{
@@ -69,7 +69,7 @@ type UpdateDeviceDTO struct {
 	ConnectionType  *string `json:"connection_type,omitempty" validate:"omitempty"`
 }
 
-func (dto *UpdateDeviceDTO) Validate() error { return validatorz.Validate.Struct(dto) }
+func (dto *UpdateDeviceDTO) Validate() error { return validation.Validate.Struct(dto) }
 
 func (dto *UpdateDeviceDTO) ToDevice() *model.Device {
 	device := &model.Device{}
@@ -110,7 +110,7 @@ type BulkCreateDevicesDTO struct {
 }
 
 func (dto *BulkCreateDevicesDTO) Validate() error {
-	return validatorz.Validate.Struct(dto)
+	return validation.Validate.Struct(dto)
 }
 
 func (dto *BulkCreateDevicesDTO) ToDevices() []*model.Device {
@@ -139,7 +139,7 @@ func (dto *BulkDeleteDeviceDTO) ToUUIDs() ([]uuid.UUID, error) {
 }
 
 func (dto *BulkDeleteDeviceDTO) Validate() error {
-	err := validatorz.Validate.Struct(dto)
+	err := validation.Validate.Struct(dto)
 	if err != nil {
 		// Handle validation errors
 		if validationErrors, ok := err.(validator.ValidationErrors); ok {
@@ -170,7 +170,7 @@ type BulkUpdateDeviceDTO struct {
 }
 
 func (dto *BulkUpdateDeviceDTO) Validate() error {
-	return validatorz.Validate.Struct(dto)
+	return validation.Validate.Struct(dto)
 }
 
 func (dto *BulkUpdateDeviceDTO) ToDevices() []*model.Device {
@@ -186,7 +186,7 @@ type UpdateDeviceStatusDTO struct {
 }
 
 func (dto *UpdateDeviceStatusDTO) Validate() error {
-	return validatorz.Validate.Struct(dto)
+	return validation.Validate.Struct(dto)
 }
 
 type BroadcastConfigDTO struct {
@@ -203,7 +203,7 @@ type BroadcastConfigDTO struct {
 	PrivateKeyPath   string `json:"private_key_path,omitempty"`
 }
 
-func (dto *BroadcastConfigDTO) Validate() error { return validatorz.Validate.Struct(dto) }
+func (dto *BroadcastConfigDTO) Validate() error { return validation.Validate.Struct(dto) }
 
 func (dto *BroadcastConfigDTO) AsModel() *model.BroadcastConfig {
 	return &model.BroadcastConfig{
@@ -232,7 +232,7 @@ type TelemetryConfigDTO struct {
 	AlertThresholds    datatypes.JSON `json:"alert_thresholds"`
 }
 
-func (dto *TelemetryConfigDTO) Validate() error { return validatorz.Validate.Struct(dto) }
+func (dto *TelemetryConfigDTO) Validate() error { return validation.Validate.Struct(dto) }
 
 func (dto *TelemetryConfigDTO) AsModel() *model.TelemetryConfig {
 	return &model.TelemetryConfig{

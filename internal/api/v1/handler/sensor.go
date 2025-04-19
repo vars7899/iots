@@ -1,4 +1,4 @@
-package v1
+package handler
 
 import (
 	"fmt"
@@ -10,6 +10,7 @@ import (
 	"github.com/vars7899/iots/internal/domain"
 	"github.com/vars7899/iots/internal/service"
 	"github.com/vars7899/iots/pkg/apperror"
+	"github.com/vars7899/iots/pkg/di"
 	"github.com/vars7899/iots/pkg/logger"
 	"github.com/vars7899/iots/pkg/response"
 	"github.com/vars7899/iots/pkg/utils"
@@ -21,8 +22,8 @@ type SensorHandler struct {
 	logger        *zap.Logger
 }
 
-func NewSensorHandler(dep APIDependencies, baseLogger *zap.Logger) *SensorHandler {
-	return &SensorHandler{SensorService: dep.SensorService, logger: logger.NewNamedZapLogger(baseLogger, "SensorHandler")}
+func NewSensorHandler(dep *di.Provider, baseLogger *zap.Logger) *SensorHandler {
+	return &SensorHandler{SensorService: dep.Services.SensorService, logger: logger.Named(baseLogger, "SensorHandler")}
 }
 
 func (h SensorHandler) RegisterRoutes(e *echo.Group) {

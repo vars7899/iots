@@ -1,15 +1,16 @@
-package v1
+package handler
 
 import (
 	"github.com/vars7899/iots/internal/service"
+	"github.com/vars7899/iots/pkg/di"
 )
 
 type UserHandler struct {
 	UserService *service.UserService
 }
 
-func NewUserHandler(dep APIDependencies) *UserHandler {
-	return &UserHandler{UserService: dep.UserService}
+func NewUserHandler(dep di.Provider) *UserHandler {
+	return &UserHandler{UserService: dep.Services.UserService}
 }
 
 // func (h *UserHandler) RegisterRoutes(e *echo.Group) {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/vars7899/iots/internal/domain"
 	"github.com/vars7899/iots/internal/domain/model"
-	"github.com/vars7899/iots/internal/validatorz"
+	"github.com/vars7899/iots/internal/validation"
 	"github.com/vars7899/iots/pkg/apperror"
 	"github.com/vars7899/iots/pkg/pagination"
 	"gorm.io/datatypes"
@@ -25,7 +25,7 @@ type CreateSensorDTO struct {
 }
 
 func (dto *CreateSensorDTO) Validate() error {
-	return validatorz.Validate.Struct(dto)
+	return validation.Validate.Struct(dto)
 }
 
 func (dto *CreateSensorDTO) AsModel() *model.Sensor {
@@ -56,7 +56,7 @@ type UpdateSensorDTO struct {
 }
 
 func (dto *UpdateSensorDTO) Validate() error {
-	return validatorz.Validate.Struct(dto)
+	return validation.Validate.Struct(dto)
 }
 
 func (dto UpdateSensorDTO) AsModel() *model.Sensor {
@@ -107,7 +107,7 @@ type SensorQueryParamsDTO struct {
 }
 
 func (dto *SensorQueryParamsDTO) Validate() error {
-	return validatorz.Validate.Struct(dto)
+	return validation.Validate.Struct(dto)
 }
 
 func (dto *SensorQueryParamsDTO) AsModel() (*pagination.Pagination, *SensorFilter, error) {

@@ -7,11 +7,9 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var (
-	Lgr *zap.Logger
-)
+var globalLogger *zap.Logger
 
-func InitLogger(onProductionMode bool) *zap.Logger {
+func Init(onProductionMode bool) {
 	var cfg zap.Config
 
 	if onProductionMode {
@@ -21,18 +19,37 @@ func InitLogger(onProductionMode bool) *zap.Logger {
 		cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 		cfg.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(time.DateTime)
 	}
-	_logger, err := cfg.Build()
+	logger, err := cfg.Build()
 	if err != nil {
-		panic("failed to build zap logger: " + err.Error())
+		panic("failed to initialize zap logger: " + err.Error())
 	}
-	Lgr = _logger
-	return Lgr
+	globalLogger = logger
 }
 
-func NewNamedZapLogger(baseLogger *zap.Logger, withName string) *zap.Logger {
+func InitDev() {
+	Init(false)
+}
+
+func InitProd() {
+	Init(true)
+}
+
+func Sync() {
+	if globalLogger != nil {
+		_ = globalLogger.Sync()
+	}
+}
+
+func L() *zap.Logger {
+	if globalLogger == nil {
+		panic("logger not initialized: nil pointer dereference")
+	}
+	return globalLogger
+}
+
+func Named(baseLogger *zap.Logger, withName string) *zap.Logger {
 	if baseLogger == nil {
 		baseLogger = zap.NewNop()
 	}
-	baseLogger.Named(withName)
-	return baseLogger
+	return baseLogger.Named(withName)
 }

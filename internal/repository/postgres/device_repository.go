@@ -28,8 +28,8 @@ type DeviceRepositoryPostgres struct {
 	maxBatchSize int
 }
 
-func NewDeviceRepositoryPostgres(db *gorm.DB) repository.DeviceRepository {
-	log := logger.Lgr.Named("postgres.DeviceRepositoryPostgres")
+func NewDeviceRepositoryPostgres(db *gorm.DB, baseLogger *zap.Logger) repository.DeviceRepository {
+	log := logger.Named(baseLogger, "DeviceRepositoryPostgres")
 	return &DeviceRepositoryPostgres{db: db, log: log, queryTimeout: time.Millisecond * 10000, maxBatchSize: 100} // TODO: tune the maxBatchSize for postgres (100 - 500)
 }
 

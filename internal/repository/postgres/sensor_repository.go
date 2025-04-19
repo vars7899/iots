@@ -23,7 +23,7 @@ type SensorRepositoryPostgres struct {
 }
 
 func NewSensorRepositoryPostgres(db *gorm.DB, baseLogger *zap.Logger) repository.SensorRepository {
-	return &SensorRepositoryPostgres{db: db, logger: logger.NewNamedZapLogger(baseLogger, "SensorRepositoryPostgres")}
+	return &SensorRepositoryPostgres{db: db, logger: logger.Named(baseLogger, "SensorRepositoryPostgres")}
 }
 
 func (r SensorRepositoryPostgres) Create(ctx context.Context, sensorData *model.Sensor) (*model.Sensor, error) {

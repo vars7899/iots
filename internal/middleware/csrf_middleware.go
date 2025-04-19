@@ -33,7 +33,7 @@ func SetCSRFCookie(c echo.Context, token string) {
 		HttpOnly: false,
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
-		Secure:   config.IsUnderProduction(),
+		Secure:   config.InProd(),
 	}
 	c.SetCookie(cookie)
 }

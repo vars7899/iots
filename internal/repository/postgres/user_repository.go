@@ -20,8 +20,8 @@ type UserRepositoryPostgres struct {
 	log *zap.Logger
 }
 
-func NewUserRepositoryPostgres(db *gorm.DB) repository.UserRepository {
-	_logger := logger.Lgr.Named("UserRepositoryPostgres")
+func NewUserRepositoryPostgres(db *gorm.DB, baseLogger *zap.Logger) repository.UserRepository {
+	_logger := logger.Named(baseLogger, "UserRepositoryPostgres")
 	return &UserRepositoryPostgres{db: db, log: _logger}
 }
 

@@ -22,7 +22,7 @@ type DeviceServiceOpts struct {
 }
 
 func NewDeviceService(repo repository.DeviceRepository, baseLogger *zap.Logger) *DeviceService {
-	return &DeviceService{deviceRepo: repo, log: logger.NewNamedZapLogger(baseLogger, "service.DeviceService")}
+	return &DeviceService{deviceRepo: repo, log: logger.Named(baseLogger, "service.DeviceService")}
 }
 
 func (s *DeviceService) CreateDevice(ctx context.Context, d *model.Device) (*model.Device, error) {

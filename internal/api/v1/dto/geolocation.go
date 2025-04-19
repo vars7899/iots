@@ -2,7 +2,7 @@ package dto
 
 import (
 	"github.com/vars7899/iots/internal/domain"
-	"github.com/vars7899/iots/internal/validatorz"
+	"github.com/vars7899/iots/internal/validation"
 )
 
 type GeoLocationDTO struct {
@@ -15,7 +15,7 @@ type GeoLocationDTO struct {
 }
 
 func (dto *GeoLocationDTO) Validate() error {
-	return validatorz.Validate.Struct(&dto)
+	return validation.Validate.Struct(&dto)
 }
 
 func (dto *GeoLocationDTO) AsModel() *domain.GeoLocation {

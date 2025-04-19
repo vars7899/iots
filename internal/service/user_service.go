@@ -9,15 +9,18 @@ import (
 	"github.com/vars7899/iots/internal/domain/user"
 	"github.com/vars7899/iots/internal/errorz"
 	"github.com/vars7899/iots/internal/repository"
+	"github.com/vars7899/iots/pkg/logger"
+	"go.uber.org/zap"
 )
 
 type UserService struct {
-	name string
-	repo repository.UserRepository
+	name   string
+	repo   repository.UserRepository
+	logger *zap.Logger
 }
 
-func NewUserService(r repository.UserRepository) *UserService {
-	return &UserService{name: "user", repo: r}
+func NewUserService(r repository.UserRepository, baseLogger *zap.Logger) *UserService {
+	return &UserService{name: "user", repo: r, logger: logger.Named(baseLogger, "UserService")}
 }
 
 func (s *UserService) CreateUser(ctx context.Context, u *user.User) (*user.User, error) {

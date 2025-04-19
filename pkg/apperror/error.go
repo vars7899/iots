@@ -62,13 +62,30 @@ const (
 	ErrCodeDBDeadlock      ErrorCode = "ERR-5009"
 	ErrCodeDBConflict      ErrorCode = "ERR-5010"
 	ErrCodeDBTimeout       ErrorCode = "ERR-5011"
+	ErrCodeDBMissing       ErrorCode = "ERR-5012" // Database not found or uninitialized
+	ErrCodeDBMigration     ErrorCode = "ERR-5013" // Migration failed or pending
+	ErrCodeDBTxnFailed     ErrorCode = "ERR-5014" // Transaction commit/rollback failed
+	ErrCodeDBPing          ErrorCode = "ERR-5015"
 
 	// Timeout errors (6xxx)
 	ErrCodeTimeout ErrorCode = "ERR-6000"
 
 	// Context errors (7xxx)
 	ErrCodeContextCancelled ErrorCode = "ERR-7000"
-	ErrCodeContextTimeout             = "ERR-7001"
+	ErrCodeContextTimeout   ErrorCode = "ERR-7001"
+
+	// Configuration & environment errors (8xxx)
+	ErrCodeMissingEnv    ErrorCode = "ERR-8000" // Required env variable not set
+	ErrCodeInvalidEnv    ErrorCode = "ERR-8001" // Env value is invalid
+	ErrCodeConfigLoad    ErrorCode = "ERR-8002" // Failed to load config file
+	ErrCodeConfigParse   ErrorCode = "ERR-8003" // Invalid config structure
+	ErrCodeMissingSecret ErrorCode = "ERR-8004" // Secret key/token missing
+	ErrCodeInvalidSecret ErrorCode = "ERR-8005" // Secret value malformed or unauthorized
+	ErrCodeMissingConfig ErrorCode = "ERR-8006" // Required config key missing
+	ErrCodeInvalidConfig ErrorCode = "ERR-8007" // Config value invalid
+
+	// Dependency & initialization errors (9xxx)
+	ErrCodeMissingDependency ErrorCode = "ERR-9000"
 )
 
 // CodeMessages maps error codes to default messages (can be overridden in i18n files)
@@ -111,6 +128,10 @@ var CodeMessages = map[ErrorCode]string{
 	ErrCodeDBDeadlock:      "database deadlock conflict",
 	ErrCodeDBConflict:      "database serialization conflict",
 	ErrCodeDBTimeout:       "database timeout",
+	ErrCodeDBMissing:       "database not found or uninitialized",
+	ErrCodeDBMigration:     "migration failed or pending",
+	ErrCodeDBTxnFailed:     "transaction commit/rollback failed",
+	ErrCodeDBPing:          "failed to ping database",
 
 	// Timeout errors
 	ErrCodeTimeout: "Request deadline exceeded",
@@ -118,6 +139,19 @@ var CodeMessages = map[ErrorCode]string{
 	// Context errors
 	ErrCodeContextCancelled: "operation ended due to context cancellation",
 	ErrCodeContextTimeout:   "operation ended due to context timeout",
+
+	// Configuration & environment errors
+	ErrCodeMissingEnv:    "Required environment variable is not set",
+	ErrCodeInvalidEnv:    "Invalid value in environment variable",
+	ErrCodeConfigLoad:    "Failed to load configuration file",
+	ErrCodeConfigParse:   "Configuration parsing failed",
+	ErrCodeMissingSecret: "Secret key or token is missing",
+	ErrCodeInvalidSecret: "Secret is malformed or unauthorized",
+	ErrCodeMissingConfig: "Required configuration key is missing",
+	ErrCodeInvalidConfig: "Invalid configuration value",
+
+	// Dependency & initialization errors
+	ErrCodeMissingDependency: "Required dependency is missing",
 }
 
 // HTTP status mapping for error codes
@@ -160,9 +194,26 @@ var CodeStatus = map[ErrorCode]int{
 	ErrCodeDBDeadlock:      StatusInternalServerError,
 	ErrCodeDBConflict:      StatusInternalServerError,
 	ErrCodeDBTimeout:       StatusInternalServerError,
+	ErrCodeDBMissing:       StatusInternalServerError,
+	ErrCodeDBMigration:     StatusInternalServerError,
+	ErrCodeDBTxnFailed:     StatusInternalServerError,
+	ErrCodeDBPing:          StatusInternalServerError,
 
 	// Context errors
 	ErrCodeContextTimeout: StatusInternalServerError,
+
+	// Configuration & environment errors
+	ErrCodeMissingEnv:    StatusInternalServerError,
+	ErrCodeInvalidEnv:    StatusInternalServerError,
+	ErrCodeConfigLoad:    StatusInternalServerError,
+	ErrCodeConfigParse:   StatusInternalServerError,
+	ErrCodeMissingSecret: StatusInternalServerError,
+	ErrCodeInvalidSecret: StatusUnauthorized,
+	ErrCodeMissingConfig: StatusInternalServerError,
+	ErrCodeInvalidConfig: StatusInternalServerError,
+
+	// Dependency & initialization errors
+	ErrCodeMissingDependency: StatusInternalServerError,
 }
 
 // AppError represents a standardized error for the application
@@ -316,7 +367,6 @@ func New(code ErrorCode) *AppError {
 	if !exists {
 		message = "An error occurred"
 	}
-	fmt.Println(code, status, exists, message)
 
 	return &AppError{
 		Code:      code,
@@ -410,6 +460,10 @@ var (
 	ErrDBDeadlock      = New(ErrCodeDBDeadlock)
 	ErrDBConflict      = New(ErrCodeDBConflict)
 	ErrDBTimeout       = New(ErrCodeDBTimeout)
+	ErrDBMissing       = New(ErrCodeDBMissing)
+	ErrDBMigration     = New(ErrCodeDBMigration)
+	ErrDBTxnFailed     = New(ErrCodeDBTxnFailed)
+	ErrDBPing          = New(ErrCodeDBPing)
 
 	// Timeout errors
 	ErrTimeout = New(ErrCodeTimeout)
@@ -417,4 +471,17 @@ var (
 	// Context errors
 	ErrContextCancelled = New(ErrCodeContextCancelled)
 	ErrContextTimeout   = New(ErrCodeContextTimeout)
+
+	// Configuration & environment errors
+	ErrMissingEnv    = New(ErrCodeMissingEnv)
+	ErrInvalidEnv    = New(ErrCodeInvalidEnv)
+	ErrConfigLoad    = New(ErrCodeConfigLoad)
+	ErrConfigParse   = New(ErrCodeConfigParse)
+	ErrMissingSecret = New(ErrCodeMissingSecret)
+	ErrInvalidSecret = New(ErrCodeInvalidSecret)
+	ErrMissingConfig = New(ErrCodeMissingConfig)
+	ErrInvalidConfig = New(ErrCodeInvalidConfig)
+
+	// Dependency & initialization errors
+	ErrMissingDependency = New(ErrCodeMissingDependency)
 )

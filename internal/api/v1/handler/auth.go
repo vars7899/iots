@@ -1,32 +1,33 @@
-package v1
+package handler
 
-import (
-	"time"
+// import (
+// 	"time"
 
-	"github.com/vars7899/iots/internal/service"
-	"github.com/vars7899/iots/pkg/auth/token"
-	"github.com/vars7899/iots/pkg/logger"
-	"go.uber.org/zap"
-)
+// 	v1 "github.com/vars7899/iots/internal/api/v1"
+// 	"github.com/vars7899/iots/internal/service"
+// 	"github.com/vars7899/iots/pkg/auth/token"
+// 	"github.com/vars7899/iots/pkg/logger"
+// 	"go.uber.org/zap"
+// )
 
-type AuthHandler struct {
-	UserService  *service.UserService
-	TokenService token.TokenService
-	log          *zap.Logger
-	RequestTTL   time.Duration
-}
+// type AuthHandler struct {
+// 	UserService  *service.UserService
+// 	TokenService token.TokenService
+// 	log          *zap.Logger
+// 	RequestTTL   time.Duration
+// }
 
-type TokenResponse struct {
-	AccessToken  string        `json:"access_token"`
-	RefreshToken string        `json:"refresh_token"`
-	TokenType    string        `json:"token_type"`
-	ExpiresIn    time.Duration `json:"expires_in"`
-}
+// type TokenResponse struct {
+// 	AccessToken  string        `json:"access_token"`
+// 	RefreshToken string        `json:"refresh_token"`
+// 	TokenType    string        `json:"token_type"`
+// 	ExpiresIn    time.Duration `json:"expires_in"`
+// }
 
-func NewAuthHandler(dep APIDependencies) *AuthHandler {
-	_logger := logger.Lgr.Named("AuthHandler")
-	return &AuthHandler{UserService: dep.UserService, TokenService: dep.TokenService, log: _logger, RequestTTL: 5 * time.Second}
-}
+// func NewAuthHandler(dep v1.Provider) *AuthHandler {
+// 	_logger := logger.Lgr.Named("AuthHandler")
+// 	return &AuthHandler{UserService: dep.UserService, TokenService: dep.TokenService, log: _logger, RequestTTL: 5 * time.Second}
+// }
 
 // func (h *AuthHandler) RegisterRoutes(e *echo.Group) {
 // 	e.POST("/register", h.Register)

@@ -1,4 +1,4 @@
-package v1
+package handler
 
 import (
 	"fmt"
@@ -10,6 +10,7 @@ import (
 	"github.com/vars7899/iots/internal/domain"
 	"github.com/vars7899/iots/internal/service"
 	"github.com/vars7899/iots/pkg/apperror"
+	"github.com/vars7899/iots/pkg/di"
 	"github.com/vars7899/iots/pkg/logger"
 	"github.com/vars7899/iots/pkg/response"
 	"github.com/vars7899/iots/pkg/utils"
@@ -21,13 +22,10 @@ type DeviceHandler struct {
 	log           *zap.Logger
 }
 
-func NewDeviceHandler(dep APIDependencies, baseLogger *zap.Logger) *DeviceHandler {
-	if dep.DeviceService == nil {
-		panic("missing dependency")
-	}
+func NewDeviceHandler(dep *di.Provider, baseLogger *zap.Logger) *DeviceHandler {
 	return &DeviceHandler{
-		DeviceService: dep.DeviceService,
-		log:           logger.NewNamedZapLogger(baseLogger, "handler.deviceHandler"),
+		DeviceService: dep.Services.DeviceService,
+		log:           logger.Named(baseLogger, "handler.deviceHandler"),
 	}
 }
 

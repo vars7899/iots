@@ -9,15 +9,18 @@ import (
 	"github.com/vars7899/iots/internal/domain/model"
 	"github.com/vars7899/iots/internal/repository"
 	"github.com/vars7899/iots/pkg/apperror"
+	"github.com/vars7899/iots/pkg/logger"
 	"github.com/vars7899/iots/pkg/pagination"
+	"go.uber.org/zap"
 )
 
 type SensorService struct {
 	sensorRepo repository.SensorRepository
+	logger     *zap.Logger
 }
 
-func NewSensorService(r repository.SensorRepository) *SensorService {
-	return &SensorService{sensorRepo: r}
+func NewSensorService(r repository.SensorRepository, baseLogger *zap.Logger) *SensorService {
+	return &SensorService{sensorRepo: r, logger: logger.Named(baseLogger, "SensorService")}
 }
 
 func (s *SensorService) CreateSensor(ctx context.Context, sensor *model.Sensor) (*model.Sensor, error) {
