@@ -2,15 +2,18 @@ package api
 
 import (
 	"github.com/labstack/echo/v4"
-	"github.com/vars7899/iots/internal/api/v1/handler"
 	"github.com/vars7899/iots/pkg/logger"
 	"go.uber.org/zap"
 )
 
 type RouteConfig struct {
 	Prefix     string
-	Handler    handler.RouteHandler
+	Handler    RouteHandler
 	Middleware []echo.MiddlewareFunc
+}
+
+type RouteHandler interface {
+	RegisterRoutes(e *echo.Group)
 }
 
 type APIRouter struct {

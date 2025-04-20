@@ -21,6 +21,7 @@ const (
 	StatusUnprocessableEntity = http.StatusUnprocessableEntity
 	StatusInternalServerError = http.StatusInternalServerError
 	StatusServiceUnavailable  = http.StatusServiceUnavailable
+	StatusRequestTimeout      = http.StatusRequestTimeout
 )
 
 const (
@@ -32,22 +33,39 @@ const (
 	ErrCodeForbidden  ErrorCode = "ERR-1004"
 
 	// Auth errors (2xxx)
-	ErrCodeUnauthorized   ErrorCode = "ERR-2000"
-	ErrCodeInvalidToken   ErrorCode = "ERR-2001"
-	ErrCodeExpiredToken   ErrorCode = "ERR-2002"
-	ErrCodeMalformedToken ErrorCode = "ERR-2003"
-	ErrCodeInvalidUUID    ErrorCode = "ERR-2004"
-	ErrCodeRefreshFailed  ErrorCode = "ERR-2005"
-	ErrCodeMissingAuth    ErrorCode = "ERR-2006"
+	ErrCodeUnauthorized          ErrorCode = "ERR-2000"
+	ErrCodeInvalidToken          ErrorCode = "ERR-2001"
+	ErrCodeExpiredToken          ErrorCode = "ERR-2002"
+	ErrCodeMalformedToken        ErrorCode = "ERR-2003"
+	ErrCodeInvalidUUID           ErrorCode = "ERR-2004"
+	ErrCodeRefreshFailed         ErrorCode = "ERR-2005"
+	ErrCodeMissingAuth           ErrorCode = "ERR-2006"
+	ErrCodeInvalidCredentials    ErrorCode = "ERR-2007"
+	ErrCodePasswordResetRequired ErrorCode = "ERR-2008"
+	ErrCodeUpdateLogin           ErrorCode = "ERR-2009"
 
 	// Validation errors (3xxx)
-	ErrCodeValidation ErrorCode = "ERR-3000"
+	ErrCodeValidation               ErrorCode = "ERR-3000"
+	ErrCodeEmailAlreadyExist        ErrorCode = "ERR-3001"
+	ErrCodeUsernameAlreadyExists    ErrorCode = "ERR-3002"
+	ErrCodePhoneNumberAlreadyExists ErrorCode = "ERR-3003"
+	ErrCodePhoneNumberInvalid       ErrorCode = "ERR-3004"
+	ErrCodePasswordTooWeak          ErrorCode = "ERR-3005"
+	ErrCodeInvalidEmailFormat       ErrorCode = "ERR-3006"
+	ErrCodeInvalidUsernameFormat    ErrorCode = "ERR-3007"
+	ErrCodeRoleNotFound             ErrorCode = "ERR-3008"
+	ErrCodePermissionNotFound       ErrorCode = "ERR-3009"
+	ErrCodeRoleAlreadyAssigned      ErrorCode = "ERR-3010"
+	ErrCodeRoleNotAssigned          ErrorCode = "ERR-3011"
+	ErrCodeInvalidUserState         ErrorCode = "ERR-3012"
 
 	// User errors (4xxx)
-	ErrCodeUserExists   ErrorCode = "ERR-4000"
-	ErrCodeUserNotFound ErrorCode = "ERR-4001"
-	ErrCodeInvalidCreds ErrorCode = "ERR-4002"
-	ErrCodeUpdateLogin  ErrorCode = "ERR-4003"
+	ErrCodeUserExists         ErrorCode = "ERR-4000"
+	ErrCodeUserNotFound       ErrorCode = "ERR-4001"
+	ErrCodeUserDeletionFailed ErrorCode = "ERR-4002"
+	ErrCodeUserUpdateFailed   ErrorCode = "ERR-4003"
+	ErrCodeUserCreationFailed ErrorCode = "ERR-4004"
+	ErrCodeInvalidRole        ErrorCode = "ERR-4005"
 
 	// Database errors (5xxx)
 	ErrCodeDBQuery         ErrorCode = "ERR-5000"
@@ -62,9 +80,9 @@ const (
 	ErrCodeDBDeadlock      ErrorCode = "ERR-5009"
 	ErrCodeDBConflict      ErrorCode = "ERR-5010"
 	ErrCodeDBTimeout       ErrorCode = "ERR-5011"
-	ErrCodeDBMissing       ErrorCode = "ERR-5012" // Database not found or uninitialized
-	ErrCodeDBMigration     ErrorCode = "ERR-5013" // Migration failed or pending
-	ErrCodeDBTxnFailed     ErrorCode = "ERR-5014" // Transaction commit/rollback failed
+	ErrCodeDBMissing       ErrorCode = "ERR-5012"
+	ErrCodeDBMigration     ErrorCode = "ERR-5013"
+	ErrCodeDBTxnFailed     ErrorCode = "ERR-5014"
 	ErrCodeDBPing          ErrorCode = "ERR-5015"
 
 	// Timeout errors (6xxx)
@@ -75,19 +93,20 @@ const (
 	ErrCodeContextTimeout   ErrorCode = "ERR-7001"
 
 	// Configuration & environment errors (8xxx)
-	ErrCodeMissingEnv    ErrorCode = "ERR-8000" // Required env variable not set
-	ErrCodeInvalidEnv    ErrorCode = "ERR-8001" // Env value is invalid
-	ErrCodeConfigLoad    ErrorCode = "ERR-8002" // Failed to load config file
-	ErrCodeConfigParse   ErrorCode = "ERR-8003" // Invalid config structure
-	ErrCodeMissingSecret ErrorCode = "ERR-8004" // Secret key/token missing
-	ErrCodeInvalidSecret ErrorCode = "ERR-8005" // Secret value malformed or unauthorized
-	ErrCodeMissingConfig ErrorCode = "ERR-8006" // Required config key missing
-	ErrCodeInvalidConfig ErrorCode = "ERR-8007" // Config value invalid
+	ErrCodeMissingEnv    ErrorCode = "ERR-8000"
+	ErrCodeInvalidEnv    ErrorCode = "ERR-8001"
+	ErrCodeConfigLoad    ErrorCode = "ERR-8002"
+	ErrCodeConfigParse   ErrorCode = "ERR-8003"
+	ErrCodeMissingSecret ErrorCode = "ERR-8004"
+	ErrCodeInvalidSecret ErrorCode = "ERR-8005"
+	ErrCodeMissingConfig ErrorCode = "ERR-8006"
+	ErrCodeInvalidConfig ErrorCode = "ERR-8007"
 
 	// Dependency & initialization errors (9xxx)
 	ErrCodeMissingDependency ErrorCode = "ERR-9000"
 )
 
+// CodeMessages maps error codes to default messages (can be overridden in i18n files)
 // CodeMessages maps error codes to default messages (can be overridden in i18n files)
 var CodeMessages = map[ErrorCode]string{
 	// General errors
@@ -98,22 +117,38 @@ var CodeMessages = map[ErrorCode]string{
 	ErrCodeForbidden:  "Forbidden",
 
 	// Auth errors
-	ErrCodeUnauthorized:   "Unauthorized access",
-	ErrCodeInvalidToken:   "Invalid or expired access token",
-	ErrCodeExpiredToken:   "Token has expired",
-	ErrCodeMalformedToken: "Malformed token",
-	ErrCodeInvalidUUID:    "Invalid user ID format in token",
-	ErrCodeRefreshFailed:  "Could not refresh token",
-	ErrCodeMissingAuth:    "Authorization header missing",
+	ErrCodeUnauthorized:          "Unauthorized access",
+	ErrCodeInvalidToken:          "Invalid or expired access token",
+	ErrCodeExpiredToken:          "Token has expired",
+	ErrCodeMalformedToken:        "Malformed token",
+	ErrCodeInvalidUUID:           "Invalid user ID format in token",
+	ErrCodeRefreshFailed:         "Could not refresh token",
+	ErrCodeMissingAuth:           "Authorization header missing",
+	ErrCodeInvalidCredentials:    "Invalid credentials",
+	ErrCodePasswordResetRequired: "Password reset required",
+	ErrCodeUpdateLogin:           "Could not update user session",
 
 	// Validation errors
-	ErrCodeValidation: "Validation failed",
+	ErrCodeValidation:            "Validation failed",
+	ErrCodeEmailAlreadyExist:     "Email already exists",
+	ErrCodeInvalidUserState:      "Invalid user state",
+	ErrCodeUsernameAlreadyExists: "Username already exists",
+	ErrCodePhoneNumberInvalid:    "Invalid phone number format",
+	ErrCodePasswordTooWeak:       "Password does not meet strength requirements",
+	ErrCodeInvalidEmailFormat:    "Invalid email format",
+	ErrCodeInvalidUsernameFormat: "Invalid username format",
+	ErrCodeRoleNotFound:          "Role not found",
+	ErrCodePermissionNotFound:    "Permission not found",
+	ErrCodeRoleAlreadyAssigned:   "Role is already assigned to user",
+	ErrCodeRoleNotAssigned:       "Role is not assigned to user",
 
 	// User errors
-	ErrCodeUserExists:   "User already exists",
-	ErrCodeUserNotFound: "User not found",
-	ErrCodeInvalidCreds: "Invalid credentials",
-	ErrCodeUpdateLogin:  "Could not update user session",
+	ErrCodeUserExists:         "User already exists",
+	ErrCodeUserNotFound:       "User not found",
+	ErrCodeUserDeletionFailed: "Failed to delete user",
+	ErrCodeUserUpdateFailed:   "Failed to update user",
+	ErrCodeUserCreationFailed: "Failed to create user",
+	ErrCodeInvalidRole:        "Invalid role provided",
 
 	// Database errors
 	ErrCodeDBQuery:         "Database query failed",
@@ -122,23 +157,23 @@ var CodeMessages = map[ErrorCode]string{
 	ErrCodeDBDelete:        "Failed to delete from database",
 	ErrCodeDBConnect:       "Failed to connect to database",
 	ErrCodeDuplicateKey:    "Duplicate key value violates unique constraint",
-	ErrCodeDBForeignKey:    "Invalid Foreign key reference",
+	ErrCodeDBForeignKey:    "Invalid foreign key reference",
 	ErrCodeInvalidData:     "Invalid or corrupt data",
-	ErrCodeDBResourceLimit: "database resource limit reached",
-	ErrCodeDBDeadlock:      "database deadlock conflict",
-	ErrCodeDBConflict:      "database serialization conflict",
-	ErrCodeDBTimeout:       "database timeout",
-	ErrCodeDBMissing:       "database not found or uninitialized",
-	ErrCodeDBMigration:     "migration failed or pending",
-	ErrCodeDBTxnFailed:     "transaction commit/rollback failed",
-	ErrCodeDBPing:          "failed to ping database",
+	ErrCodeDBResourceLimit: "Database resource limit reached",
+	ErrCodeDBDeadlock:      "Database deadlock conflict",
+	ErrCodeDBConflict:      "Database serialization conflict",
+	ErrCodeDBTimeout:       "Database timeout",
+	ErrCodeDBMissing:       "Database not found or uninitialized",
+	ErrCodeDBMigration:     "Migration failed or pending",
+	ErrCodeDBTxnFailed:     "Transaction commit/rollback failed",
+	ErrCodeDBPing:          "Failed to ping database",
 
 	// Timeout errors
 	ErrCodeTimeout: "Request deadline exceeded",
 
 	// Context errors
-	ErrCodeContextCancelled: "operation ended due to context cancellation",
-	ErrCodeContextTimeout:   "operation ended due to context timeout",
+	ErrCodeContextCancelled: "Operation cancelled by context",
+	ErrCodeContextTimeout:   "Operation timed out due to context deadline",
 
 	// Configuration & environment errors
 	ErrCodeMissingEnv:    "Required environment variable is not set",
@@ -155,6 +190,7 @@ var CodeMessages = map[ErrorCode]string{
 }
 
 // HTTP status mapping for error codes
+// HTTP status mapping for error codes
 var CodeStatus = map[ErrorCode]int{
 	// General errors
 	ErrCodeInternal:   StatusInternalServerError,
@@ -164,22 +200,38 @@ var CodeStatus = map[ErrorCode]int{
 	ErrCodeForbidden:  StatusForbidden,
 
 	// Auth errors
-	ErrCodeUnauthorized:   StatusUnauthorized,
-	ErrCodeInvalidToken:   StatusUnauthorized,
-	ErrCodeExpiredToken:   StatusUnauthorized,
-	ErrCodeMalformedToken: StatusBadRequest,
-	ErrCodeInvalidUUID:    StatusBadRequest,
-	ErrCodeRefreshFailed:  StatusUnauthorized,
-	ErrCodeMissingAuth:    StatusUnauthorized,
+	ErrCodeUnauthorized:          StatusUnauthorized,
+	ErrCodeInvalidToken:          StatusUnauthorized,
+	ErrCodeExpiredToken:          StatusUnauthorized,
+	ErrCodeMalformedToken:        StatusBadRequest,
+	ErrCodeInvalidUUID:           StatusBadRequest,
+	ErrCodeRefreshFailed:         StatusUnauthorized,
+	ErrCodeMissingAuth:           StatusUnauthorized,
+	ErrCodeInvalidCredentials:    StatusUnauthorized,
+	ErrCodePasswordResetRequired: StatusForbidden,
+	ErrCodeUpdateLogin:           StatusServiceUnavailable,
 
 	// Validation errors
-	ErrCodeValidation: StatusUnprocessableEntity,
+	ErrCodeValidation:            StatusUnprocessableEntity,
+	ErrCodeEmailAlreadyExist:     StatusConflict,
+	ErrCodeInvalidUserState:      StatusBadRequest,
+	ErrCodeUsernameAlreadyExists: StatusConflict,
+	ErrCodePhoneNumberInvalid:    StatusBadRequest,
+	ErrCodePasswordTooWeak:       StatusBadRequest,
+	ErrCodeInvalidEmailFormat:    StatusBadRequest,
+	ErrCodeInvalidUsernameFormat: StatusBadRequest,
+	ErrCodeRoleNotFound:          StatusNotFound,
+	ErrCodePermissionNotFound:    StatusNotFound,
+	ErrCodeRoleAlreadyAssigned:   StatusConflict,
+	ErrCodeRoleNotAssigned:       StatusBadRequest,
 
 	// User errors
-	ErrCodeUserExists:   StatusConflict,
-	ErrCodeUserNotFound: StatusNotFound,
-	ErrCodeInvalidCreds: StatusUnauthorized,
-	ErrCodeUpdateLogin:  StatusServiceUnavailable,
+	ErrCodeUserExists:         StatusConflict,
+	ErrCodeUserNotFound:       StatusNotFound,
+	ErrCodeUserDeletionFailed: StatusInternalServerError,
+	ErrCodeUserUpdateFailed:   StatusInternalServerError,
+	ErrCodeUserCreationFailed: StatusInternalServerError,
+	ErrCodeInvalidRole:        StatusBadRequest,
 
 	// Database errors
 	ErrCodeDBQuery:         StatusInternalServerError,
@@ -188,19 +240,23 @@ var CodeStatus = map[ErrorCode]int{
 	ErrCodeDBDelete:        StatusInternalServerError,
 	ErrCodeDBConnect:       StatusServiceUnavailable,
 	ErrCodeDuplicateKey:    StatusConflict,
-	ErrCodeDBForeignKey:    StatusInternalServerError,
+	ErrCodeDBForeignKey:    StatusBadRequest,
 	ErrCodeInvalidData:     StatusBadRequest,
-	ErrCodeDBResourceLimit: StatusInternalServerError,
+	ErrCodeDBResourceLimit: StatusServiceUnavailable,
 	ErrCodeDBDeadlock:      StatusInternalServerError,
 	ErrCodeDBConflict:      StatusInternalServerError,
-	ErrCodeDBTimeout:       StatusInternalServerError,
-	ErrCodeDBMissing:       StatusInternalServerError,
+	ErrCodeDBTimeout:       StatusServiceUnavailable,
+	ErrCodeDBMissing:       StatusServiceUnavailable,
 	ErrCodeDBMigration:     StatusInternalServerError,
 	ErrCodeDBTxnFailed:     StatusInternalServerError,
-	ErrCodeDBPing:          StatusInternalServerError,
+	ErrCodeDBPing:          StatusServiceUnavailable,
+
+	// Timeout errors
+	ErrCodeTimeout: StatusRequestTimeout,
 
 	// Context errors
-	ErrCodeContextTimeout: StatusInternalServerError,
+	ErrCodeContextCancelled: StatusRequestTimeout,
+	ErrCodeContextTimeout:   StatusRequestTimeout,
 
 	// Configuration & environment errors
 	ErrCodeMissingEnv:    StatusInternalServerError,
@@ -208,7 +264,7 @@ var CodeStatus = map[ErrorCode]int{
 	ErrCodeConfigLoad:    StatusInternalServerError,
 	ErrCodeConfigParse:   StatusInternalServerError,
 	ErrCodeMissingSecret: StatusInternalServerError,
-	ErrCodeInvalidSecret: StatusUnauthorized,
+	ErrCodeInvalidSecret: StatusInternalServerError,
 	ErrCodeMissingConfig: StatusInternalServerError,
 	ErrCodeInvalidConfig: StatusInternalServerError,
 
@@ -420,7 +476,6 @@ func stackTrace(skip int) string {
 	return builder.String()
 }
 
-// Common errors
 var (
 	// General errors
 	ErrInternal   = New(ErrCodeInternal)
@@ -430,24 +485,40 @@ var (
 	ErrForbidden  = New(ErrCodeForbidden)
 
 	// Auth errors
-	ErrUnauthorized   = New(ErrCodeUnauthorized)
-	ErrInvalidToken   = New(ErrCodeInvalidToken)
-	ErrExpiredToken   = New(ErrCodeExpiredToken)
-	ErrMalformedToken = New(ErrCodeMalformedToken)
-	ErrInvalidUUID    = New(ErrCodeInvalidUUID)
-	ErrRefreshFailed  = New(ErrCodeRefreshFailed)
-	ErrMissingAuth    = New(ErrCodeMissingAuth)
+	ErrUnauthorized          = New(ErrCodeUnauthorized)
+	ErrInvalidToken          = New(ErrCodeInvalidToken)
+	ErrExpiredToken          = New(ErrCodeExpiredToken)
+	ErrMalformedToken        = New(ErrCodeMalformedToken)
+	ErrInvalidUUID           = New(ErrCodeInvalidUUID)
+	ErrRefreshFailed         = New(ErrCodeRefreshFailed)
+	ErrMissingAuth           = New(ErrCodeMissingAuth)
+	ErrInvalidCredentials    = New(ErrCodeInvalidCredentials)
+	ErrPasswordResetRequired = New(ErrCodePasswordResetRequired)
+	ErrUpdateLogin           = New(ErrCodeUpdateLogin)
 
 	// Validation errors
-	ErrValidation = New(ErrCodeValidation)
+	ErrValidation            = New(ErrCodeValidation)
+	ErrEmailAlreadyExist     = New(ErrCodeEmailAlreadyExist)
+	ErrInvalidUserState      = New(ErrCodeInvalidUserState)
+	ErrUsernameAlreadyExists = New(ErrCodeUsernameAlreadyExists)
+	ErrPhoneNumberInvalid    = New(ErrCodePhoneNumberInvalid)
+	ErrPasswordTooWeak       = New(ErrCodePasswordTooWeak)
+	ErrInvalidEmailFormat    = New(ErrCodeInvalidEmailFormat)
+	ErrInvalidUsernameFormat = New(ErrCodeInvalidUsernameFormat)
+	ErrRoleNotFound          = New(ErrCodeRoleNotFound)
+	ErrPermissionNotFound    = New(ErrCodePermissionNotFound)
+	ErrRoleAlreadyAssigned   = New(ErrCodeRoleAlreadyAssigned)
+	ErrRoleNotAssigned       = New(ErrCodeRoleNotAssigned)
 
 	// User errors
-	ErrUserExists   = New(ErrCodeUserExists)
-	ErrUserNotFound = New(ErrCodeUserNotFound)
-	ErrInvalidCreds = New(ErrCodeInvalidCreds)
-	ErrUpdateLogin  = New(ErrCodeUpdateLogin)
+	ErrUserExists         = New(ErrCodeUserExists)
+	ErrUserNotFound       = New(ErrCodeUserNotFound)
+	ErrUserDeletionFailed = New(ErrCodeUserDeletionFailed)
+	ErrUserUpdateFailed   = New(ErrCodeUserUpdateFailed)
+	ErrUserCreationFailed = New(ErrCodeUserCreationFailed)
+	ErrInvalidRole        = New(ErrCodeInvalidRole)
 
-	// DB errors
+	// Database errors
 	ErrDBQuery         = New(ErrCodeDBQuery)
 	ErrDBInsert        = New(ErrCodeDBInsert)
 	ErrDBUpdate        = New(ErrCodeDBUpdate)

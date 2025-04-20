@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/vars7899/iots/internal/api/v1/dto"
-	"github.com/vars7899/iots/internal/domain"
 	"github.com/vars7899/iots/internal/service"
 	"github.com/vars7899/iots/pkg/apperror"
 	"github.com/vars7899/iots/pkg/di"
@@ -36,13 +35,13 @@ func (h *DeviceHandler) RegisterRoutes(e *echo.Group) {
 	e.PATCH("/:id", h.UpdateDevice)
 	// bulk operation endpoints
 	// TODO: add middleware to protect only for admin
-	e.POST("/bulk", h.CreateNewDeviceInBulk)
-	e.DELETE("/bulk", h.DeleteDeviceInBulk)
-	e.PATCH("/bulk", h.UpdateDeviceInBulk)
+	// e.POST("/bulk", h.CreateNewDeviceInBulk)
+	// e.DELETE("/bulk", h.DeleteDeviceInBulk)
+	// e.PATCH("/bulk", h.UpdateDeviceInBulk)
 	// status endpoints
-	e.PATCH("/:id/status", h.UpdateDeviceStatus)
-	e.PATCH("/:id/online", h.MarkDeviceOnline)
-	e.PATCH("/:id/offline", h.MarkDeviceOffline)
+	// e.PATCH("/:id/status", h.UpdateDeviceStatus)
+	// e.PATCH("/:id/online", h.MarkDeviceOnline)
+	// e.PATCH("/:id/offline", h.MarkDeviceOffline)
 
 }
 
@@ -140,128 +139,128 @@ func (h *DeviceHandler) UpdateDevice(c echo.Context) error {
 	})
 }
 
-func (h *DeviceHandler) CreateNewDeviceInBulk(c echo.Context) error {
-	var dto dto.BulkCreateDevicesDTO
-	reqPath := utils.GetRequestUrlPath(c)
+// func (h *DeviceHandler) CreateNewDeviceInBulk(c echo.Context) error {
+// 	var dto dto.BulkCreateDevicesDTO
+// 	reqPath := utils.GetRequestUrlPath(c)
 
-	if err := utils.BindAndValidate(c, &dto); err != nil {
-		return err
-	}
+// 	if err := utils.BindAndValidate(c, &dto); err != nil {
+// 		return err
+// 	}
 
-	createdDevices, err := h.DeviceService.BulkCreateDevices(c.Request().Context(), dto.ToDevices())
-	if err != nil {
-		return apperror.ErrorHandler(err, apperror.ErrCodeDBInsert, "failed to bulk insert devices").WithPath(reqPath)
-	}
+// 	createdDevices, err := h.DeviceService.BulkCreateDevices(c.Request().Context(), dto.ToDevices())
+// 	if err != nil {
+// 		return apperror.ErrorHandler(err, apperror.ErrCodeDBInsert, "failed to bulk insert devices").WithPath(reqPath)
+// 	}
 
-	h.log.Debug("bulk device creation successful", zap.Int("count", len(createdDevices)))
-	return response.JSON(c, http.StatusCreated, echo.Map{
-		"message": "devices created successfully",
-		"devices": createdDevices,
-	})
-}
+// 	h.log.Debug("bulk device creation successful", zap.Int("count", len(createdDevices)))
+// 	return response.JSON(c, http.StatusCreated, echo.Map{
+// 		"message": "devices created successfully",
+// 		"devices": createdDevices,
+// 	})
+// }
 
-func (h *DeviceHandler) DeleteDeviceInBulk(c echo.Context) error {
-	var dto dto.BulkDeleteDeviceDTO
-	reqPath := utils.GetRequestUrlPath(c)
+// func (h *DeviceHandler) DeleteDeviceInBulk(c echo.Context) error {
+// 	var dto dto.BulkDeleteDeviceDTO
+// 	reqPath := utils.GetRequestUrlPath(c)
 
-	if err := utils.BindAndValidate(c, &dto); err != nil {
-		return err
-	}
+// 	if err := utils.BindAndValidate(c, &dto); err != nil {
+// 		return err
+// 	}
 
-	uuids, err := dto.ToUUIDs()
-	if err != nil {
-		return apperror.ErrBadRequest.WithMessage("invalid UUID format").WithPath(reqPath).Wrap(err)
-	}
+// 	uuids, err := dto.ToUUIDs()
+// 	if err != nil {
+// 		return apperror.ErrBadRequest.WithMessage("invalid UUID format").WithPath(reqPath).Wrap(err)
+// 	}
 
-	if err := h.DeviceService.BulkDeleteDevices(c.Request().Context(), uuids); err != nil {
-		return apperror.ErrorHandler(err, apperror.ErrCodeDBDelete, "failed to bulk delete devices").
-			WithPath(reqPath).Wrap(err)
-	}
+// 	if err := h.DeviceService.BulkDeleteDevices(c.Request().Context(), uuids); err != nil {
+// 		return apperror.ErrorHandler(err, apperror.ErrCodeDBDelete, "failed to bulk delete devices").
+// 			WithPath(reqPath).Wrap(err)
+// 	}
 
-	h.log.Debug("bulk device deletion successful", zap.Int("count", len(uuids)))
-	return response.JSON(c, http.StatusOK, echo.Map{
-		"message":    "devices deleted successfully",
-		"device_ids": dto.DeviceIDs,
-	})
-}
+// 	h.log.Debug("bulk device deletion successful", zap.Int("count", len(uuids)))
+// 	return response.JSON(c, http.StatusOK, echo.Map{
+// 		"message":    "devices deleted successfully",
+// 		"device_ids": dto.DeviceIDs,
+// 	})
+// }
 
-func (h *DeviceHandler) UpdateDeviceInBulk(c echo.Context) error {
-	var dto dto.BulkUpdateDeviceDTO
-	reqPath := utils.GetRequestUrlPath(c)
+// func (h *DeviceHandler) UpdateDeviceInBulk(c echo.Context) error {
+// 	var dto dto.BulkUpdateDeviceDTO
+// 	reqPath := utils.GetRequestUrlPath(c)
 
-	if err := utils.BindAndValidate(c, &dto); err != nil {
-		return err
-	}
+// 	if err := utils.BindAndValidate(c, &dto); err != nil {
+// 		return err
+// 	}
 
-	updatedDevices, err := h.DeviceService.BulkUpdateDevices(c.Request().Context(), dto.ToDevices())
-	if err != nil {
-		return apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate, "").WithPath(reqPath).Wrap(err)
-	}
+// 	updatedDevices, err := h.DeviceService.BulkUpdateDevices(c.Request().Context(), dto.ToDevices())
+// 	if err != nil {
+// 		return apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate, "").WithPath(reqPath).Wrap(err)
+// 	}
 
-	return response.JSON(c, int(http.StatusOK), echo.Map{
-		"message": "devices updated successfully",
-		"devices": updatedDevices,
-	})
-}
+// 	return response.JSON(c, int(http.StatusOK), echo.Map{
+// 		"message": "devices updated successfully",
+// 		"devices": updatedDevices,
+// 	})
+// }
 
-func (h *DeviceHandler) UpdateDeviceStatus(c echo.Context) error {
-	paramID := c.Param("id")
-	reqPath := utils.GetRequestUrlPath(c)
+// func (h *DeviceHandler) UpdateDeviceStatus(c echo.Context) error {
+// 	paramID := c.Param("id")
+// 	reqPath := utils.GetRequestUrlPath(c)
 
-	deviceID, err := uuid.Parse(paramID)
-	if err != nil {
-		return apperror.ErrInvalidUUID.WithMessage("invalid uuid format").WithPath(reqPath).Wrap(err)
-	}
+// 	deviceID, err := uuid.Parse(paramID)
+// 	if err != nil {
+// 		return apperror.ErrInvalidUUID.WithMessage("invalid uuid format").WithPath(reqPath).Wrap(err)
+// 	}
 
-	var dto dto.UpdateDeviceStatusDTO
-	if err := utils.BindAndValidate(c, &dto); err != nil {
-		return err
-	}
+// 	var dto dto.UpdateDeviceStatusDTO
+// 	if err := utils.BindAndValidate(c, &dto); err != nil {
+// 		return err
+// 	}
 
-	err = h.DeviceService.UpdateDeviceStatus(c.Request().Context(), deviceID, domain.Status(dto.Status))
-	if err != nil {
-		return apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate)
-	}
+// 	err = h.DeviceService.UpdateDeviceStatus(c.Request().Context(), deviceID, domain.Status(dto.Status))
+// 	if err != nil {
+// 		return apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate)
+// 	}
 
-	return response.JSON(c, int(http.StatusOK), echo.Map{
-		"message": fmt.Sprintf("device with ID %s status updated to %s", deviceID.String(), dto.Status),
-	})
-}
-func (h *DeviceHandler) MarkDeviceOnline(c echo.Context) error {
-	paramID := c.Param("id")
-	reqPath := utils.GetRequestUrlPath(c)
+// 	return response.JSON(c, int(http.StatusOK), echo.Map{
+// 		"message": fmt.Sprintf("device with ID %s status updated to %s", deviceID.String(), dto.Status),
+// 	})
+// }
+// func (h *DeviceHandler) MarkDeviceOnline(c echo.Context) error {
+// 	paramID := c.Param("id")
+// 	reqPath := utils.GetRequestUrlPath(c)
 
-	deviceID, err := uuid.Parse(paramID)
-	if err != nil {
-		return apperror.ErrInvalidUUID.WithMessage("invalid uuid format").WithPath(reqPath).Wrap(err)
-	}
+// 	deviceID, err := uuid.Parse(paramID)
+// 	if err != nil {
+// 		return apperror.ErrInvalidUUID.WithMessage("invalid uuid format").WithPath(reqPath).Wrap(err)
+// 	}
 
-	updatedDevice, err := h.DeviceService.MarkDeviceAsOnline(c.Request().Context(), deviceID)
-	if err != nil {
-		return apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate)
-	}
+// 	updatedDevice, err := h.DeviceService.MarkDeviceAsOnline(c.Request().Context(), deviceID)
+// 	if err != nil {
+// 		return apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate)
+// 	}
 
-	return response.JSON(c, int(http.StatusOK), echo.Map{
-		"message": fmt.Sprintf("device with ID %s marked as online", deviceID.String()),
-		"device":  updatedDevice,
-	})
-}
-func (h *DeviceHandler) MarkDeviceOffline(c echo.Context) error {
-	paramID := c.Param("id")
-	reqPath := utils.GetRequestUrlPath(c)
+// 	return response.JSON(c, int(http.StatusOK), echo.Map{
+// 		"message": fmt.Sprintf("device with ID %s marked as online", deviceID.String()),
+// 		"device":  updatedDevice,
+// 	})
+// }
+// func (h *DeviceHandler) MarkDeviceOffline(c echo.Context) error {
+// 	paramID := c.Param("id")
+// 	reqPath := utils.GetRequestUrlPath(c)
 
-	deviceID, err := uuid.Parse(paramID)
-	if err != nil {
-		return apperror.ErrInvalidUUID.WithMessage("invalid uuid format").WithPath(reqPath).Wrap(err)
-	}
+// 	deviceID, err := uuid.Parse(paramID)
+// 	if err != nil {
+// 		return apperror.ErrInvalidUUID.WithMessage("invalid uuid format").WithPath(reqPath).Wrap(err)
+// 	}
 
-	updatedDevice, err := h.DeviceService.MarkDeviceAsOffline(c.Request().Context(), deviceID)
-	if err != nil {
-		return apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate)
-	}
+// 	updatedDevice, err := h.DeviceService.MarkDeviceAsOffline(c.Request().Context(), deviceID)
+// 	if err != nil {
+// 		return apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate)
+// 	}
 
-	return response.JSON(c, int(http.StatusOK), echo.Map{
-		"message": fmt.Sprintf("device with ID %s marked as offline", deviceID.String()),
-		"device":  updatedDevice,
-	})
-}
+// 	return response.JSON(c, int(http.StatusOK), echo.Map{
+// 		"message": fmt.Sprintf("device with ID %s marked as offline", deviceID.String()),
+// 		"device":  updatedDevice,
+// 	})
+// }

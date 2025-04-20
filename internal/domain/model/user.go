@@ -1,4 +1,4 @@
-package user
+package model
 
 import (
 	"fmt"
@@ -26,10 +26,21 @@ type User struct {
 
 // TODO: implement public view
 type UserPublicView struct {
+	Username    string
+	Email       string
+	PhoneNumber string
+	Roles       []Role
+	IsActive    bool
 }
 
-func (u *User) PublicView() {
-
+func (u *User) PublicView() *UserPublicView {
+	return &UserPublicView{
+		Username:    u.Username,
+		Email:       u.Email,
+		PhoneNumber: u.PhoneNumber,
+		Roles:       u.Roles,
+		IsActive:    u.IsActive,
+	}
 }
 
 func (u *User) SetPassword(raw string) error {

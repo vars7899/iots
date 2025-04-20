@@ -26,14 +26,14 @@ func NewSensorRepositoryPostgres(db *gorm.DB, baseLogger *zap.Logger) repository
 	return &SensorRepositoryPostgres{db: db, logger: logger.Named(baseLogger, "SensorRepositoryPostgres")}
 }
 
-func (r SensorRepositoryPostgres) Create(ctx context.Context, sensorData *model.Sensor) (*model.Sensor, error) {
+func (r *SensorRepositoryPostgres) Create(ctx context.Context, sensorData *model.Sensor) (*model.Sensor, error) {
 	if err := r.db.WithContext(ctx).Clauses(clause.Returning{}).Create(&sensorData).Error; err != nil {
 		return nil, apperror.MapDBError(err, domain.EntitySensor)
 	}
 	return sensorData, nil
 }
 
-func (r SensorRepositoryPostgres) GetByID(ctx context.Context, sensorID uuid.UUID) (*model.Sensor, error) {
+func (r *SensorRepositoryPostgres) GetByID(ctx context.Context, sensorID uuid.UUID) (*model.Sensor, error) {
 	var sensorExist model.Sensor
 	if err := r.db.WithContext(ctx).First(&sensorExist, "id = ?", sensorID).Error; err != nil {
 		return nil, apperror.MapDBError(err, domain.EntitySensor)
@@ -41,7 +41,18 @@ func (r SensorRepositoryPostgres) GetByID(ctx context.Context, sensorID uuid.UUI
 	return &sensorExist, nil
 }
 
-func (r SensorRepositoryPostgres) Delete(ctx context.Context, sensorID uuid.UUID) error {
+func (r *SensorRepositoryPostgres) HardDelete(ctx context.Context, sensorID uuid.UUID) error {
+	tx := r.db.WithContext(ctx).Unscoped().Where("id = ?", sensorID).Delete(&model.Sensor{})
+	if tx.Error != nil {
+		return apperror.MapDBError(tx.Error, domain.EntitySensor)
+	}
+	if tx.RowsAffected == 0 {
+		return apperror.ErrNotFound.WithMessagef("cannot hard delete %s: no matching record found", domain.EntitySensor)
+	}
+	return nil
+}
+
+func (r *SensorRepositoryPostgres) Delete(ctx context.Context, sensorID uuid.UUID) error {
 	tx := r.db.WithContext(ctx).Where("id = ?", sensorID).Delete(&model.Sensor{})
 	if tx.Error != nil {
 		return apperror.MapDBError(tx.Error, domain.EntitySensor)
@@ -52,7 +63,7 @@ func (r SensorRepositoryPostgres) Delete(ctx context.Context, sensorID uuid.UUID
 	return nil
 }
 
-func (r SensorRepositoryPostgres) Update(ctx context.Context, sensorData *model.Sensor) (*model.Sensor, error) {
+func (r *SensorRepositoryPostgres) Update(ctx context.Context, sensorData *model.Sensor) (*model.Sensor, error) {
 	var updatedSensor model.Sensor
 
 	tx := r.db.WithContext(ctx).Model(&model.Sensor{}).Clauses(clause.Returning{}).Where("id = ?", sensorData.ID).Updates(sensorData).Scan(&updatedSensor)
@@ -65,7 +76,7 @@ func (r SensorRepositoryPostgres) Update(ctx context.Context, sensorData *model.
 	return &updatedSensor, nil
 }
 
-func (r SensorRepositoryPostgres) List(ctx context.Context, filter *dto.SensorFilter, paginationOpt ...*pagination.Pagination) ([]*model.Sensor, error) {
+func (r *SensorRepositoryPostgres) List(ctx context.Context, filter *dto.SensorFilter, paginationOpt ...*pagination.Pagination) ([]*model.Sensor, error) {
 	var paginationConfig *pagination.Pagination
 	if len(paginationOpt) > 0 && paginationOpt[0] != nil {
 		paginationConfig = paginationOpt[0]

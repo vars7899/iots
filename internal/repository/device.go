@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/vars7899/iots/internal/domain"
 	"github.com/vars7899/iots/internal/domain/model"
 	"github.com/vars7899/iots/pkg/pagination"
 )
@@ -19,7 +18,7 @@ type DeviceRepository interface {
 
 	// Query operations
 	FindAll(ctx context.Context, paginationOpt *pagination.Pagination) ([]*model.Device, int64, error)
-	FindByOwnerID(ctx context.Context, ownerID uuid.UUID, paginationOpt *pagination.Pagination) ([]*model.Device, int64, error)
+	// FindByOwnerID(ctx context.Context, ownerID uuid.UUID, paginationOpt *pagination.Pagination) ([]*model.Device, int64, error)
 	// FindByType(ctx context.Context, deviceType string, paginationOpt pagination.Pagination) ([]device.Device, int64, error)
 	// FindByStatus(ctx context.Context, status string, paginationOpt pagination.Pagination) ([]device.Device, int64, error)
 	// FindByTags(ctx context.Context, tags []string, paginationOpt pagination.Pagination) ([]device.Device, int64, error)
@@ -31,14 +30,14 @@ type DeviceRepository interface {
 	// FindByLastConnectedRange(ctx context.Context, start, end time.Time, page, pageSize int) ([]device.Device, int64, error)
 
 	// Status management
-	UpdateStatus(ctx context.Context, deviceID uuid.UUID, status domain.Status) error
-	MarkOnline(ctx context.Context, deviceID uuid.UUID) (*model.Device, error)
-	MarkOffline(ctx context.Context, deviceID uuid.UUID) (*model.Device, error)
+	// UpdateStatus(ctx context.Context, deviceID uuid.UUID, status domain.Status) error
+	// MarkOnline(ctx context.Context, deviceID uuid.UUID) (*model.Device, error)
+	// MarkOffline(ctx context.Context, deviceID uuid.UUID) (*model.Device, error)
 
 	// // Bulk operations
-	BulkCreate(ctx context.Context, devices []*model.Device) ([]*model.Device, error)
-	BulkUpdate(ctx context.Context, devices []*model.Device) ([]*model.Device, error)
-	BulkDelete(ctx context.Context, ids []uuid.UUID) error
+	// BulkCreate(ctx context.Context, devices []*model.Device) ([]*model.Device, error)
+	// BulkUpdate(ctx context.Context, devices []*model.Device) ([]*model.Device, error)
+	// BulkDelete(ctx context.Context, ids []uuid.UUID) error
 	// UpdateDevicesStatus(ctx context.Context, ids []uuid.UUID, status string) error
 
 	// // Telemetry config management
