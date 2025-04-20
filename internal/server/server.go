@@ -61,6 +61,10 @@ func (s *Server) WaitForShutdown() {
 	s.logger.Info("server stopped gracefully")
 }
 
+func (s *Server) E() *echo.Echo {
+	return s.echo
+}
+
 func setServerConfig(configs ...*config.ServerConfig) *config.ServerConfig {
 	var cfg config.ServerConfig
 	if len(configs) > 0 && configs[0] != nil {

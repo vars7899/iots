@@ -42,7 +42,7 @@ type HelperProvider struct {
 	// Metrics       metrics.MetricsProvider
 }
 
-func NewProvider(db *gorm.DB, baseLogger *zap.Logger, cfg *config.AppConfig) error {
+func NewProvider(db *gorm.DB, baseLogger *zap.Logger, cfg *config.AppConfig) (*Provider, error) {
 	p := &Provider{
 		db:     db,
 		logger: logger.Named(baseLogger, "Provider"),
@@ -50,19 +50,19 @@ func NewProvider(db *gorm.DB, baseLogger *zap.Logger, cfg *config.AppConfig) err
 	}
 
 	if err := p.initRepositoryProvider(); err != nil {
-		return err
+		return nil, err
 	}
 	p.logger.Info("repositories initialized successfully")
 	if err := p.initServiceProvider(); err != nil {
-		return err
+		return nil, err
 	}
 	p.logger.Info("services initialized successfully")
 	if err := p.initHelperProvider(); err != nil {
-		return err
+		return nil, err
 	}
 	p.logger.Info("helpers initialized successfully")
 
-	return nil
+	return p, nil
 }
 
 func (p *Provider) initRepositoryProvider() error {
