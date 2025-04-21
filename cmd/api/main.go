@@ -25,6 +25,8 @@ func main() {
 		return
 	}
 
+	// fmt.Println(config.GlobalConfig.Postgres, config.GlobalConfig.Jwt, config.GlobalConfig.Redis, config.GlobalConfig.Server)
+
 	// Init db
 	gormDB, err := db.NewGormDB(logger.L(), config.GlobalConfig.Postgres)
 	if err != nil {
@@ -35,6 +37,7 @@ func main() {
 	if !config.InProd() {
 		if err := gormDB.AutoMigrateAll(); err != nil {
 			logger.L().Fatal("failed to auto-migrate db", zap.Error(err))
+			return
 		}
 	}
 

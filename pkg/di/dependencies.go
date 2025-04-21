@@ -2,6 +2,8 @@ package di
 
 import (
 	"github.com/vars7899/iots/config"
+	"github.com/vars7899/iots/internal/cache"
+	"github.com/vars7899/iots/internal/cache/redis"
 	"github.com/vars7899/iots/internal/repository"
 	"github.com/vars7899/iots/internal/repository/postgres"
 	"github.com/vars7899/iots/internal/service"
@@ -36,8 +38,8 @@ type ServiceProvider struct {
 
 type HelperProvider struct {
 	TokenService token.TokenService
+	JTIService   cache.JTIStore
 	// In the future:
-	// CacheService  cache.CacheService
 	// EmailService  email.EmailService
 	// Metrics       metrics.MetricsProvider
 }
@@ -107,9 +109,13 @@ func (p *Provider) initHelperProvider() error {
 	if p.config == nil || p.config.Jwt == nil {
 		return apperror.ErrMissingConfig.WithMessage("missing json web token credentials")
 	}
+	if p.config == nil || p.config.Redis == nil {
+		return apperror.ErrMissingConfig.WithMessage("missing redis credentials")
+	}
 
 	p.Helpers = &HelperProvider{
 		TokenService: token.NewJwtTokenService(p.config.Jwt, helperLogger),
+		JTIService:   redis.NewRedisJTIStore(p.config.Redis, helperLogger),
 	}
 
 	return nil

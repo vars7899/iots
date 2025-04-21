@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/vars7899/iots/internal/api/v1/dto"
@@ -34,7 +35,7 @@ func (s *SensorService) CreateSensor(ctx context.Context, sensor *model.Sensor) 
 func (s *SensorService) GetSensor(ctx context.Context, sensorID uuid.UUID) (*model.Sensor, error) {
 	sensorData, err := s.sensorRepo.GetByID(ctx, sensorID)
 	if err != nil {
-		return nil, err
+		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, fmt.Sprintf("failed to fetch %s with ID %s", domain.EntitySensor, sensorID))
 	}
 	return sensorData, nil
 }

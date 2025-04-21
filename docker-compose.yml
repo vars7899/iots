@@ -6,11 +6,23 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: iot_user
-      POSTGRES_PASSWORD: secret
-      POSTGRES_DB: iot_db
+      POSTGRES_USER: ${POSTGRES_DB_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_DB_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB_NAME}
     volumes:
       - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:bookworm
+    container_name: iot_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
 
 volumes:
   pgdata:

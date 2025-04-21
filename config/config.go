@@ -17,6 +17,7 @@ type AppConfig struct {
 	Server   *ServerConfig   `mapstructure:"server"`
 	Postgres *PostgresConfig `mapstructure:"postgres"`
 	Jwt      *JwtConfig      `mapstructure:"jwt"`
+	Redis    *RedisConfig    `mapstructure:"redis"`
 }
 
 type ServerConfig struct {
@@ -41,14 +42,21 @@ type JwtConfig struct {
 	RefreshTokenTTL time.Duration `mapstructure:"refresh_token_ttl"`
 }
 
+type RedisConfig struct {
+	Addr     string        `mapstructure:"address"`
+	Password string        `mapstructure:"password"`
+	DB       int           `mapstructure:"db"`
+	Prefix   string        `mapstructure:"prefix"`
+	TTL      time.Duration `mapstructure:"ttl"`
+}
+
 var envBindings = map[string]string{
 	"postgres.db_user":     "POSTGRES_DB_USER",
 	"postgres.db_password": "POSTGRES_DB_PASSWORD",
 	"postgres.db_name":     "POSTGRES_DB_NAME",
-	"postgres.db_host":     "POSTGRES_DB_HOST",
-	"postgres.db_port":     "POSTGRES_DB_PORT",
 	"jwt.access_secret":    "JWT_ACCESS_SECRET",
 	"jwt.refresh_secret":   "JWT_REFRESH_SECRET",
+	"redis.password":       "REDIS_PASSWORD",
 }
 
 func Load(filename string, filetype string, path string, baseLogger *zap.Logger) error {

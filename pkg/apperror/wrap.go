@@ -62,9 +62,10 @@ func WrapAppErrWithContext(err error, contextMessage string, fallbackCode ErrorC
 
 // HandleDBError processes database errors with appropriate codes
 func MapDBError(err error, entity string) *AppError {
-	if err == nil {
-		return nil
-	}
+	// fmt.Println("errrrrr--->", err)
+	// if err == nil {
+	// 	return nil
+	// }
 
 	// 1. GORM not found
 	if errors.Is(err, gorm.ErrRecordNotFound) {

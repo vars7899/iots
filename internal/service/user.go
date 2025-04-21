@@ -27,26 +27,28 @@ func (s *UserService) CreateUser(ctx context.Context, userData *model.User) (*mo
 	// check email
 	emailAlreadyTaken, err := s.userRepo.ExistByEmail(ctx, userData.Email)
 	if err != nil {
-		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, "failed to create user").Wrap(err)
+		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, "failed to create user")
 	}
 	if emailAlreadyTaken {
-		return nil, apperror.ErrorHandler(err, apperror.ErrCodeEmailAlreadyExist, "failed to create user: email already taken")
+		return nil, apperror.ErrEmailAlreadyExist.WithMessage("failed to create user: email already taken")
 	}
+	fmt.Println("in service ---------------------------->", userData)
+
 	// check username
 	usernameAlreadyTaken, err := s.userRepo.ExistByUserName(ctx, userData.Username)
 	if err != nil {
-		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, "failed to create user").Wrap(err)
+		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, "failed to create user")
 	}
 	if usernameAlreadyTaken {
-		return nil, apperror.ErrorHandler(err, apperror.ErrCodeUsernameAlreadyExists, "failed to create user: username already taken")
+		return nil, apperror.ErrUsernameAlreadyExists.WithMessage("failed to create user: username already taken")
 	}
 	// check phone number
-	phoneNumberAlreadyTaken, err := s.userRepo.ExistByPhoneNumber(ctx, userData.Username)
+	phoneNumberAlreadyTaken, err := s.userRepo.ExistByPhoneNumber(ctx, userData.PhoneNumber)
 	if err != nil {
-		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, "failed to create user").Wrap(err)
+		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, "failed to create user")
 	}
 	if phoneNumberAlreadyTaken {
-		return nil, apperror.ErrorHandler(err, apperror.ErrCodePhoneNumberAlreadyExists, "failed to create user: phone number already taken")
+		return nil, apperror.ErrPhoneNumberAlreadyExists.WithMessage("failed to create user: phone number already taken")
 	}
 
 	if err := userData.SetPassword(userData.Password); err != nil {

@@ -163,3 +163,49 @@ Want to tackle any of these now? I can help scaffold models, endpoints, or DB mi
 [] Register endpoint
 [] Logout endpoint
   - [] invalidate & blacklist the authorization bearer token
+
+
+### today dev
+Token Revocation / Blacklist (optional)
+
+Store refresh token jti in DB or cache (e.g., Redis).
+
+Revoke on logout or suspicious activity.
+
+Compare jti on refresh.
+
+Add JWT Middleware for Role-Based Access
+
+Extend middleware.JwtTokenMiddleware to include roles and permissions.
+
+Add HasRole, HasPermission helper middlewares.
+
+Custom Claims in JWT
+
+Add role, permissions, or tenant ID to token claims if needed.
+
+Token Metadata Tracking
+
+Store token creation time, IP address, device in DB.
+
+Useful for account security dashboards and detecting anomalies.
+
+Token Rotation (Advanced)
+
+On each /refresh, issue new refresh token.
+
+Invalidate previous one using jti or cache.
+
+Add Token Expiry Info in Header
+
+Helps frontend apps preemptively refresh tokens.
+
+
+📂 Bonus: Package Structure Tip
+You’re already doing this well, but for polish:
+
+pkg/auth/token: Add JWTClaims type, GenerateTokenPair, ParseToken, ValidateToken, RevokeToken, etc.
+
+middleware/: Include auth/role middlewares, token extraction helpers.
+
+internal/api/v1/handler/auth.go: Possibly break into files if it gets long (login.go, refresh.go, etc.).

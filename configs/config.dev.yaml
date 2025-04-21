@@ -4,14 +4,23 @@ server:
   hide_banner: true
   hide_port: true
 postgres:
-  db_user: ""
-  db_password: ""
-  db_name: ""
-  db_host: ""
-  db_port: ""
+  db_user: ${POSTGRES_DB_USER}
+  db_password: ${POSTGRES_DB_PASSWORD}
+  db_name: ${POSTGRES_DB_NAME}
+  db_host: localhost
+  db_port: "5432"
 jwt:
-  access_secret: ""
-  refresh_secret: ""
-  access_token_ttl: 1h
-  refresh_token_ttl: 24h
+  access_secret: ${JWT_ACCESS_SECRET}
+  refresh_secret: ${JWT_REFRESH_SECRET}
+  access_token_ttl: 10s
+  refresh_token_ttl: 60s # update redis ttl accordingly always add buffer with this as base
+redis:
+  address: localhost:6379
+  password: ${REDIS_PASSWORD}
+  db: 0
+  prefix: "iot-redis-jti:"
+  ttl: 75s  # related to refresh_token_ttl -> ttl = refresh_token_ttl + buffer
+
+
+
 

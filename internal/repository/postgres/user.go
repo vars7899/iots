@@ -35,6 +35,8 @@ func (r *UserRepositoryPostgres) GetByID(ctx context.Context, userID uuid.UUID) 
 }
 
 func (r *UserRepositoryPostgres) Create(ctx context.Context, userData *model.User) (*model.User, error) {
+	// var createdUser model.User
+	fmt.Println("dddd", userData)
 	if err := r.db.WithContext(ctx).Model(&model.User{}).Clauses(clause.Returning{}).Create(&userData).Error; err != nil {
 		return nil, apperror.MapDBError(err, domain.EntitySensor)
 	}
@@ -91,7 +93,7 @@ func (r *UserRepositoryPostgres) Restore(ctx context.Context, userID uuid.UUID) 
 
 func (r *UserRepositoryPostgres) FindByEmail(ctx context.Context, email string) (*model.User, error) {
 	var userExist model.User
-	if err := r.db.WithContext(ctx).Where("email = ?", email).First(&userExist).Error; err != nil {
+	if err := r.db.WithContext(ctx).Model(&model.User{}).Where("email = ?", email).First(&userExist).Error; err != nil {
 		return nil, apperror.MapDBError(err, domain.EntityUser)
 	}
 	return &userExist, nil
@@ -99,7 +101,7 @@ func (r *UserRepositoryPostgres) FindByEmail(ctx context.Context, email string) 
 
 func (r *UserRepositoryPostgres) FindByUserName(ctx context.Context, userName string) (*model.User, error) {
 	var userExist model.User
-	if err := r.db.WithContext(ctx).Where("username = ?", userName).First(&userExist).Error; err != nil {
+	if err := r.db.WithContext(ctx).Model(&model.User{}).Where("username = ?", userName).First(&userExist).Error; err != nil {
 		return nil, apperror.MapDBError(err, domain.EntityUser)
 	}
 	return &userExist, nil
@@ -107,7 +109,7 @@ func (r *UserRepositoryPostgres) FindByUserName(ctx context.Context, userName st
 
 func (r *UserRepositoryPostgres) FindByPhoneNumber(ctx context.Context, phoneNumber string) (*model.User, error) {
 	var userExist model.User
-	if err := r.db.WithContext(ctx).Where("phone_number = ?", phoneNumber).First(&userExist).Error; err != nil {
+	if err := r.db.WithContext(ctx).Model(&model.User{}).Where("phone_number = ?", phoneNumber).First(&userExist).Error; err != nil {
 		return nil, apperror.MapDBError(err, domain.EntityUser)
 	}
 	return &userExist, nil
@@ -115,7 +117,7 @@ func (r *UserRepositoryPostgres) FindByPhoneNumber(ctx context.Context, phoneNum
 
 func (r *UserRepositoryPostgres) FindByRoles(ctx context.Context, userID uuid.UUID) (*model.User, error) {
 	var userExist model.User
-	if err := r.db.WithContext(ctx).Preload("Roles.Permissions").First(&userExist, "id = ?", userID).Error; err != nil {
+	if err := r.db.WithContext(ctx).Model(&model.User{}).Preload("Roles.Permissions").First(&userExist, "id = ?", userID).Error; err != nil {
 		return nil, apperror.MapDBError(err, domain.EntityUser)
 	}
 	return &userExist, nil
@@ -143,7 +145,7 @@ func (r *UserRepositoryPostgres) ExistByEmail(ctx context.Context, email string)
 
 func (r *UserRepositoryPostgres) ExistByUserName(ctx context.Context, username string) (bool, error) {
 	var count int64
-	if err := r.db.WithContext(ctx).Where("username = ?", username).Count(&count).Error; err != nil {
+	if err := r.db.WithContext(ctx).Model(&model.User{}).Where("username = ?", username).Count(&count).Error; err != nil {
 		return false, apperror.MapDBError(err, domain.EntityUser)
 	}
 	return count > 0, nil
@@ -151,7 +153,7 @@ func (r *UserRepositoryPostgres) ExistByUserName(ctx context.Context, username s
 
 func (r *UserRepositoryPostgres) ExistByPhoneNumber(ctx context.Context, phoneNumber string) (bool, error) {
 	var count int64
-	if err := r.db.WithContext(ctx).Where("phone_number = ?", phoneNumber).Count(&count).Error; err != nil {
+	if err := r.db.WithContext(ctx).Model(&model.User{}).Where("phone_number = ?", phoneNumber).Count(&count).Error; err != nil {
 		return false, apperror.MapDBError(err, domain.EntityUser)
 	}
 	return count > 0, nil

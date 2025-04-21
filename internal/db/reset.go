@@ -6,12 +6,11 @@ import (
 
 func ResetDatabase(db *gorm.DB) error {
 	// Drop all tables
-	// err := db.Migrator().DropTable(DB_Tables...)
-	// if err != nil {
-	// 	return err
-	// }
+	err := db.Migrator().DropTable(DB_Tables...)
+	if err != nil {
+		return err
+	}
 
-	// // Recreate tables
-	// return AutoMigrate(db)
-	return nil
+	// Recreate tables
+	return db.AutoMigrate(db)
 }

@@ -1,6 +1,7 @@
 package db
 
 import (
+	"github.com/vars7899/iots/internal/domain"
 	"github.com/vars7899/iots/internal/domain/model"
 )
 
@@ -10,6 +11,10 @@ var DB_Tables = []interface{}{
 	&model.Permission{},
 	&model.UserRole{},
 	&model.RolePermission{},
-	&model.Sensor{},
 	&model.Device{},
+	&model.Sensor{},
+	&model.Telemetry{},
+	&model.AccessGroup{},
+	&model.DeviceEvent{},
+	&domain.GeoLocation{},
 }

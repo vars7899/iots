@@ -1,25 +1,44 @@
 package main
 
+import (
+	"github.com/vars7899/iots/config"
+	"github.com/vars7899/iots/internal/db"
+	"github.com/vars7899/iots/internal/validation"
+	"github.com/vars7899/iots/pkg/logger"
+	"go.uber.org/zap"
+)
+
 func main() {
-	// _logger := logger.InitLogger(false)
-	// defer _logger.Sync()
+	// Init logger
+	logger.InitDev()
+	defer logger.Sync()
 
-	// _postgresConfig, err := config.Load(".env.dev")
-	// if err != nil {
-	// 	log.Fatalf("failed to load config: %v", err)
-	// }
+	// Init validator
+	validation.Init(logger.L())
 
-	// _db, err := db.ConnectPostgres(*_postgresConfig)
-	// if err != nil {
-	// 	log.Fatalf("failed to connect to db: %v", err)
-	// }
+	// Load configuration
+	if err := config.Load("config.dev", "yaml", "./configs", logger.L()); err != nil {
+		logger.L().Fatal("failed to load config, shutting down app", zap.Error(err))
+		return
+	}
 
-	// if os.Getenv("APP_ENV") != "development" {
-	// 	logger.Lgr.Fatal("Database reset not allowed")
-	// 	return
-	// }
+	// Init db
+	gormDB, err := db.NewGormDB(logger.L(), config.GlobalConfig.Postgres)
+	if err != nil {
+		logger.L().Fatal("failed to connect to db", zap.Error(err))
+		return
+	}
 
-	// logger.Lgr.Info("Database reset initiated")
-	// db.ResetDatabase(_db)
-	// logger.Lgr.Info("Database reset completed")
+	// auto migration (dev only)
+	if config.InProd() {
+		logger.L().Error("reset not allowed under production")
+		return
+	}
+
+	logger.L().Info("Database reset initiated")
+	if err := db.ResetDatabase(gormDB.DB()); err != nil {
+		logger.L().Error("Database reset failed", zap.Error(err))
+		return
+	}
+	logger.L().Info("Database reset completed")
 }

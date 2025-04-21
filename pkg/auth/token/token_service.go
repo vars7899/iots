@@ -8,8 +8,9 @@ import (
 )
 
 type TokenService interface {
-	GenerateAccessToken(userID uuid.UUID, roles []string) (string, error)
-	GenerateRefreshToken(userID uuid.UUID) (string, error)
+	GenerateAuthTokenSet(userID uuid.UUID, roles []string) (*AuthTokenSet, error)
+	GenerateAccessToken(jti string, userID uuid.UUID, roles []string) (string, error)
+	GenerateRefreshToken(jti string, userID uuid.UUID) (string, error)
 	ValidateAccessToken(tokenStr string) (*jwt.Token, error)
 	ValidateRefreshToken(tokenStr string) (*jwt.Token, error)
 	ParseAccessToken(tokenStr string) (*AccessTokenClaims, error)

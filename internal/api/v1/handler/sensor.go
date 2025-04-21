@@ -68,6 +68,7 @@ func (h SensorHandler) GetSensor(c echo.Context) error {
 
 	sensorData, err := h.SensorService.GetSensor(c.Request().Context(), sensorID)
 	if err != nil {
+		fmt.Println(err)
 		return apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, fmt.Sprintf("failed to retrieve %s with ID %s", domain.EntitySensor, reqID)).WithPath(reqPath)
 	}
 	return response.JSON(c, int(http.StatusOK), echo.Map{
