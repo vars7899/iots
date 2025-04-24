@@ -56,6 +56,10 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		return err
 	}
 
+	if dto.Email == "" && dto.UserName == "" && dto.PhoneNumber == "" {
+		return apperror.ErrBadRequest.WithMessage("provide at least one login identifier").WithPath(reqPath)
+	}
+
 	userExist, err := h.userService.FindByLoginIdentifier(reqCtx, service.LoginIdentifier{
 		Email:       dto.Email,
 		Username:    dto.UserName,
@@ -290,32 +294,3 @@ func (h *AuthHandler) generateToken(ctx context.Context, u *model.User) (*token.
 
 	return set, nil
 }
-
-// Helper method to check expiration for refresh tokens
-func (h *AuthHandler) isRefreshTokenExpired(refreshToken string) (bool, error) {
-	claims, err := h.tokenService.ParseRefreshToken(refreshToken)
-	if err != nil {
-		return false, err
-	}
-	return time.Now().After(claims.ExpiresAt.Time), nil
-}
-
-// func (h *AuthHandler) generateToken(u *model.User) (accessToken *string, refreshToken *string, reason error) {
-// 	var genAccessToken string
-// 	var genRefreshToken string
-// 	var err error
-// 	// Map roles to []string
-// 	roles := make([]string, len(u.Roles))
-// 	for i, r := range u.Roles {
-// 		roles[i] = r.Name
-// 	}
-// 	if genAccessToken, err = h.tokenService.GenerateAccessToken(u.ID, roles); err != nil {
-// 		h.log.Error("failed to generate access token", zap.String("userID", u.ID.String()), zap.Error(err)) //
-// 		return nil, nil, err
-// 	}
-// 	if genRefreshToken, err = h.tokenService.GenerateRefreshToken(u.ID); err != nil {
-// 		h.log.Error("failed to generate refresh token", zap.String("userID", u.ID.String()), zap.Error(err)) //
-// 		return nil, nil, err
-// 	}
-// 	return &genAccessToken, &genRefreshToken, nil
-// }

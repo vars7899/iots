@@ -32,46 +32,17 @@ func RegisterRoutes(e *echo.Echo, deps *di.Provider, baseLogger *zap.Logger) {
 		Prefix:  "/auth",
 		Handler: handler.NewAuthHandler(deps, l),
 	})
+
+	if deps.WsHub == nil {
+		l.Fatal("Websocket Hub is nil in DI provider")
+		return
+	}
+
+	telemetryWsHandler := handler.NewTelemetryWebSocketHandler(deps, l)
+
+	r.AddWebsocketRoute(api.WsRouteConfig{
+		Path:    "/sensor/telemetry",
+		Handler: telemetryWsHandler.HandleConnection,
+	})
 	r.Mount()
 }
-
-// type V1Router struct {
-// 	Deps   *di.Provider
-// 	Logger *zap.Logger
-// 	routes []RouteConfig
-// }
-
-// func NewV1Router(deps *di.Provider, baseLogger *zap.Logger) *V1Router {
-// 	return &V1Router{Deps: deps, Logger: logger.Named(baseLogger, "V1Router")}
-// }
-
-// type RouteConfig struct {
-// 	Prefix     string
-// 	Handler    handler.RouteHandler
-// 	Middleware []echo.MiddlewareFunc
-// }
-
-// func (r *V1Router) RegisterRoutes(e *echo.Echo) {
-// 	apiV1 := e.Group(API_PREFIX)
-// 	apiV1.Use(middleware.ErrorHandler(logger.L()))
-
-// 	routeConfigs := []RouteConfig{
-
-// 		{
-// 			Prefix:  "/sensor",
-// 			Handler: handler.NewSensorHandler(r.Deps, r.Logger),
-// 		},
-// 	}
-
-// 	for _, rc := range routeConfigs {
-// 		g := apiV1.Group(rc.Prefix)
-// 		if len(rc.Middleware) > 0 {
-// 			g.Use(rc.Middleware...)
-// 		}
-// 		rc.Handler.RegisterRoutes(g)
-// 	}
-// }
-
-// func (r *V1Router) AddRoute(route RouteConfig) {
-// 	r.routes = append(r.routes, route)
-// }

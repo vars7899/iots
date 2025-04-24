@@ -12,6 +12,11 @@ type RouteConfig struct {
 	Middleware []echo.MiddlewareFunc
 }
 
+type WsRouteConfig struct {
+	Path    string
+	Handler echo.HandlerFunc
+}
+
 type RouteHandler interface {
 	RegisterRoutes(e *echo.Group)
 }
@@ -21,6 +26,7 @@ type APIRouter struct {
 	logger      *zap.Logger
 	middlewares []echo.MiddlewareFunc
 	routes      []RouteConfig
+	wsRoutes    []WsRouteConfig
 }
 
 func NewAPIRouter(e *echo.Echo, prefix string, baseLogger *zap.Logger) *APIRouter {
@@ -35,6 +41,7 @@ func NewAPIRouter(e *echo.Echo, prefix string, baseLogger *zap.Logger) *APIRoute
 func (r *APIRouter) Mount() {
 	r.MountMiddleware()
 	r.MountRoutes()
+	r.MountWebsockets()
 }
 
 func (r *APIRouter) MountRoutes() {
@@ -45,7 +52,7 @@ func (r *APIRouter) MountRoutes() {
 		}
 		route.Handler.RegisterRoutes(g)
 	}
-	r.logger.Info("routes mounted successfully", zap.Int("count", len(r.routes)))
+	r.logger.Info("http routes mounted", zap.Int("count", len(r.routes)))
 }
 
 func (r *APIRouter) AddRoute(route RouteConfig) {
@@ -58,9 +65,20 @@ func (r *APIRouter) MountMiddleware() {
 			r.base.Use(middleware)
 		}
 	}
-	r.logger.Info("middleware mounted successfully", zap.Int("count", len(r.middlewares)))
+	r.logger.Info("middleware mounted", zap.Int("count", len(r.middlewares)))
 }
 
 func (r *APIRouter) AddMiddleware(middleware echo.MiddlewareFunc) {
 	r.middlewares = append(r.middlewares, middleware)
+}
+
+func (r *APIRouter) AddWebsocketRoute(wsRoute WsRouteConfig) {
+	r.wsRoutes = append(r.wsRoutes, wsRoute)
+}
+
+func (r *APIRouter) MountWebsockets() {
+	for _, route := range r.wsRoutes {
+		r.base.GET(route.Path, route.Handler)
+	}
+	r.logger.Info("websocket routes mounted", zap.Int("count", len(r.wsRoutes)))
 }

@@ -557,3 +557,7 @@ var (
 	// Dependency & initialization errors
 	ErrMissingDependency = New(ErrCodeMissingDependency)
 )
+
+func RepoErrorMsg(operation string, entity string) string {
+	return fmt.Sprintf("failed to %s %s: database operation failed", operation, entity)
+}

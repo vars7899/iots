@@ -36,7 +36,7 @@ func main() {
 	}
 
 	logger.L().Info("Database reset initiated")
-	if err := db.ResetDatabase(gormDB.DB()); err != nil {
+	if err := db.ResetDatabase(gormDB); err != nil {
 		logger.L().Error("Database reset failed", zap.Error(err))
 		return
 	}

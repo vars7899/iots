@@ -1,6 +1,9 @@
 package main
 
 import (
+	"context"
+	"sync"
+
 	"github.com/vars7899/iots/config"
 	v1 "github.com/vars7899/iots/internal/api/v1"
 	"github.com/vars7899/iots/internal/db"
@@ -12,6 +15,11 @@ import (
 )
 
 func main() {
+	wg := &sync.WaitGroup{}
+
+	appCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// Init logger
 	logger.InitDev()
 	defer logger.Sync()
@@ -25,7 +33,10 @@ func main() {
 		return
 	}
 
-	// fmt.Println(config.GlobalConfig.Postgres, config.GlobalConfig.Jwt, config.GlobalConfig.Redis, config.GlobalConfig.Server)
+	if err := config.LoadSensorSchemaRegistry("sensor.schema", "yaml", "./configs", logger.L()); err != nil {
+		logger.L().Fatal("failed to load sensor schema config, shutting down app", zap.Error(err))
+		return
+	}
 
 	// Init db
 	gormDB, err := db.NewGormDB(logger.L(), config.GlobalConfig.Postgres)
@@ -42,7 +53,7 @@ func main() {
 	}
 
 	// Load dependencies
-	deps, err := di.NewProvider(gormDB.DB(), logger.L(), config.GlobalConfig)
+	deps, err := di.NewProvider(appCtx, wg, gormDB.DB(), logger.L(), config.GlobalConfig)
 	if err != nil {
 		logger.L().Fatal("failed to load provider dependencies", zap.Error(err))
 		return
@@ -56,4 +67,7 @@ func main() {
 	// Start http server
 	s.Start()
 	s.WaitForShutdown()
+
+	deps.Close()
+	logger.L().Info("application shutdown completed")
 }
