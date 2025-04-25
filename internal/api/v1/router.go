@@ -16,7 +16,7 @@ func RegisterRoutes(e *echo.Echo, deps *di.Provider, baseLogger *zap.Logger) {
 	l := logger.Named(baseLogger, "v1Router")
 	r := api.NewAPIRouter(e, string(api.ApiV1), baseLogger)
 
-	// authMiddleware := middleware.AuthRequired(e, deps.Helpers.TokenService, deps.Helpers.JTIService, deps.Services.CasbinService, l)
+	authMiddleware := middleware.AuthRequired(e, deps.Helpers.TokenService, deps.Helpers.JTIService, deps.Services.CasbinService, l)
 
 	// Middleware
 	r.AddMiddleware(middleware.ErrorHandler(l))
@@ -27,9 +27,9 @@ func RegisterRoutes(e *echo.Echo, deps *di.Provider, baseLogger *zap.Logger) {
 		Handler: handler.NewDeviceHandler(deps, l),
 	})
 	r.AddRoute(api.RouteConfig{
-		Prefix:  "/sensor",
-		Handler: handler.NewSensorHandler(deps, l),
-		// Middleware: []echo.MiddlewareFunc{middleware.JWT_JTI_Middleware(deps.Helpers.TokenService, deps.Helpers.JTIService, l)},
+		Prefix:     "/sensor",
+		Handler:    handler.NewSensorHandler(deps, l),
+		Middleware: []echo.MiddlewareFunc{authMiddleware},
 	})
 	r.AddRoute(api.RouteConfig{
 		Prefix:  "/auth",

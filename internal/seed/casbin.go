@@ -9,47 +9,47 @@ import (
 
 var permissions = []model.Permission{
 	// User management
-	{Code: "users:read", Name: "Read Users"},
-	{Code: "users:create", Name: "Create Users"},
-	{Code: "users:update", Name: "Update Users"},
-	{Code: "users:delete", Name: "Delete Users"},
+	{Code: "user:read", Name: "Read Users"},
+	{Code: "user:create", Name: "Create Users"},
+	{Code: "user:update", Name: "Update Users"},
+	{Code: "user:delete", Name: "Delete Users"},
 
 	// Sensor management
-	{Code: "sensors:read", Name: "Read Sensors"},
-	{Code: "sensors:create", Name: "Create Sensors"},
-	{Code: "sensors:update", Name: "Update Sensors"},
-	{Code: "sensors:delete", Name: "Delete Sensors"},
-	{Code: "sensors:configure", Name: "Configure Sensors"},
-	{Code: "sensors:calibrate", Name: "Calibrate Sensors"},
-	{Code: "sensors:assign", Name: "Assign Sensors to User/Location"},
+	{Code: "sensor:read", Name: "Read Sensors"},
+	{Code: "sensor:create", Name: "Create Sensors"},
+	{Code: "sensor:update", Name: "Update Sensors"},
+	{Code: "sensor:delete", Name: "Delete Sensors"},
+	{Code: "sensor:configure", Name: "Configure Sensors"},
+	{Code: "sensor:calibrate", Name: "Calibrate Sensors"},
+	{Code: "sensor:assign", Name: "Assign Sensors to User/Location"},
 
 	// Device management
-	{Code: "devices:read", Name: "Read Devices"},
-	{Code: "devices:create", Name: "Create Devices"},
-	{Code: "devices:update", Name: "Update Devices"},
-	{Code: "devices:delete", Name: "Delete Devices"},
-	{Code: "devices:restart", Name: "Restart Devices"},
-	{Code: "devices:firmware:update", Name: "Update Device Firmware"},
+	{Code: "device:read", Name: "Read Devices"},
+	{Code: "device:create", Name: "Create Devices"},
+	{Code: "device:update", Name: "Update Devices"},
+	{Code: "device:delete", Name: "Delete Devices"},
+	{Code: "device:restart", Name: "Restart Devices"},
+	{Code: "device:firmware:update", Name: "Update Device Firmware"},
 
 	// Location or site management
-	{Code: "locations:read", Name: "Read Locations"},
-	{Code: "locations:create", Name: "Create Locations"},
-	{Code: "locations:update", Name: "Update Locations"},
-	{Code: "locations:delete", Name: "Delete Locations"},
+	{Code: "location:read", Name: "Read Locations"},
+	{Code: "location:create", Name: "Create Locations"},
+	{Code: "location:update", Name: "Update Locations"},
+	{Code: "location:delete", Name: "Delete Locations"},
 
 	// Analytics or logs
-	{Code: "logs:view", Name: "View Logs"},
-	{Code: "logs:export", Name: "Export Logs"},
-	{Code: "analytics:view", Name: "View Analytics"},
+	{Code: "log:view", Name: "View Logs"},
+	{Code: "log:export", Name: "Export Logs"},
+	{Code: "analytic:view", Name: "View Analytics"},
 
 	// Roles and permissions
-	{Code: "roles:read", Name: "Read Roles"},
-	{Code: "roles:create", Name: "Create Roles"},
-	{Code: "roles:update", Name: "Update Roles"},
-	{Code: "roles:delete", Name: "Delete Roles"},
+	{Code: "role:read", Name: "Read Roles"},
+	{Code: "role:create", Name: "Create Roles"},
+	{Code: "role:update", Name: "Update Roles"},
+	{Code: "role:delete", Name: "Delete Roles"},
 
-	{Code: "permissions:read", Name: "Read Permissions"},
-	{Code: "permissions:assign", Name: "Assign Permissions to Roles"},
+	{Code: "permission:read", Name: "Read Permissions"},
+	{Code: "permission:assign", Name: "Assign Permissions to Roles"},
 }
 
 var roles = []model.Role{
@@ -81,17 +81,17 @@ var roles = []model.Role{
 
 var rolePermissions = map[string][]string{
 	"admin": {
-		"users:read", "users:create", "users:update", "users:delete",
-		"sensors:read", "sensors:create", "sensors:update", "sensors:delete", "sensors:configure",
+		"user:read", "user:create", "user:update", "user:delete",
+		"sensor:read", "sensor:create", "sensor:update", "sensor:delete", "sensor:configure",
 	},
 	"viewer": {
-		"users:read", "sensors:read",
+		"user:read", "sensor:read", "sensor:create",
 	},
 	"sensor.read": {
-		"sensors:read",
+		"sensor:read",
 	},
 	"sensor.write": {
-		"sensors:read", "sensors:create", "sensors:update",
+		"sensor:read", "sensor:create", "sensor:update",
 	},
 }
 

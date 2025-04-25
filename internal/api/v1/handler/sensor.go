@@ -9,7 +9,6 @@ import (
 	"github.com/vars7899/iots/internal/api/v1/dto"
 	"github.com/vars7899/iots/internal/cache"
 	"github.com/vars7899/iots/internal/domain"
-	"github.com/vars7899/iots/internal/middleware"
 	"github.com/vars7899/iots/internal/service"
 	"github.com/vars7899/iots/pkg/apperror"
 	"github.com/vars7899/iots/pkg/auth/token"
@@ -34,7 +33,7 @@ func NewSensorHandler(deps *di.Provider, baseLogger *zap.Logger) *SensorHandler 
 
 func (h SensorHandler) RegisterRoutes(e *echo.Group) {
 	e.POST("", h.CreateSensor)
-	e.GET("", h.ListSensor, middleware.JWT_JTI_Middleware(h.tokenService, h.jtiService, h.logger))
+	e.GET("", h.ListSensor)
 	e.GET("/:id", h.GetSensor)
 	e.DELETE("/:id", h.DeleteSensor)
 	e.PATCH("/:id", h.UpdateSensor)
