@@ -2,9 +2,11 @@ package utils
 
 import (
 	"context"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/vars7899/iots/pkg/apperror"
+	"github.com/vars7899/iots/pkg/contextkey"
 )
 
 func ConvertVectorToPointerVector[T any](i []T) []*T {
@@ -43,4 +45,34 @@ func BindAndValidate(c echo.Context, dto interface{}) *apperror.AppError {
 		}
 	}
 	return nil
+}
+
+func GetActionFromHTTPRequest(c echo.Context) string {
+	method := c.Request().Method
+	switch method {
+	case "GET":
+		return string(contextkey.ActionRead)
+	case "PATCH", "PUT":
+		return string(contextkey.ActionUpdate)
+	case "DELETE":
+		return string(contextkey.ActionDelete)
+	case "POST":
+		return string(contextkey.ActionCreate)
+	default:
+		return strings.ToLower(method)
+	}
+}
+
+func GetResourceFromRequest(c echo.Context, versionPrefix string) string {
+	path := c.Request().URL.Path
+
+	if strings.HasPrefix(path, versionPrefix) {
+		path = strings.TrimPrefix(path, versionPrefix+"/")
+	}
+
+	pathParts := strings.Split(path, "/")
+	if len(pathParts) > 0 {
+		return pathParts[0]
+	}
+	return path
 }
