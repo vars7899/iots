@@ -24,6 +24,15 @@ func AuthRequired(e *echo.Echo, tokenService token.TokenService, jtiStore cache.
 
 // CombinedJWTMiddleware combines token parsing and JTI validation in one middleware
 func JWT_JTI_Middleware(tokenService token.TokenService, jtiStore cache.JTIStore, logger *zap.Logger) echo.MiddlewareFunc {
+	if tokenService == nil {
+		panic("tokenService is nil")
+	}
+	if jtiStore == nil {
+		panic("jtiStore is nil")
+	}
+	if logger == nil {
+		panic("logger is nil")
+	}
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// Extract and validate token

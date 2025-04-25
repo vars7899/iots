@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/vars7899/iots/internal/domain/model"
 )
@@ -14,4 +16,10 @@ type CasbinService interface {
 	RemovePolicy(role string, resource string, action string) (bool, error)
 	CheckPermission(userID uuid.UUID, resource string, action string) (bool, error)
 	SyncUserRoles(user *model.User) error
+}
+
+type RoleService interface {
+	GetDefaultRoleID(ctx context.Context) (uuid.UUID, error)
+	GetRoleBySlug(ctx context.Context, slug string) (*model.Role, error)
+	GetAllRolesWithPermissions(ctx context.Context) ([]*model.Role, error)
 }

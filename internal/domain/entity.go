@@ -6,4 +6,5 @@ const (
 	EntityUser       = "user"
 	EntityTelemetry  = "telemetry"
 	EntityAccessRule = "access rule"
+	EntityRole       = "role"
 )

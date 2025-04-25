@@ -7,6 +7,7 @@ import (
 	"github.com/vars7899/iots/config"
 	v1 "github.com/vars7899/iots/internal/api/v1"
 	"github.com/vars7899/iots/internal/db"
+	"github.com/vars7899/iots/internal/seed"
 	"github.com/vars7899/iots/internal/server"
 	"github.com/vars7899/iots/internal/validation"
 	"github.com/vars7899/iots/pkg/di"
@@ -57,6 +58,13 @@ func main() {
 	if err != nil {
 		logger.L().Fatal("failed to load provider dependencies", zap.Error(err))
 		return
+	}
+
+	if !config.InProd() {
+		if err := seed.SeedRolesAndPermission(gormDB.DB(), deps.Services.CasbinService, logger.L()); err != nil {
+			logger.L().Fatal("failed to seed roles and permissions", zap.Error(err))
+			return
+		}
 	}
 
 	s := server.NewServer(deps, logger.L(), config.GlobalConfig.Server)

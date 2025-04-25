@@ -36,6 +36,7 @@ type RepositoryProvider struct {
 	DeviceRepository    repository.DeviceRepository
 	UserRepository      repository.UserRepository
 	TelemetryRepository repository.TelemetryRepository
+	RoleRepository      repository.RoleRepository
 }
 
 type ServiceProvider struct {
@@ -43,6 +44,7 @@ type ServiceProvider struct {
 	DeviceService    *service.DeviceService
 	UserService      *service.UserService
 	TelemetryService *service.TelemetryService
+	RoleService      service.RoleService
 	CasbinService    service.CasbinService
 }
 
@@ -113,6 +115,7 @@ func (p *Provider) initRepositoryProvider() error {
 		DeviceRepository:    postgres.NewDeviceRepositoryPostgres(p.db, l),
 		UserRepository:      postgres.NewUserRepositoryPostgres(p.db, l),
 		TelemetryRepository: postgres.NewTelemetryRepositoryPostgres(p.db, l),
+		RoleRepository:      postgres.NewRoleRepositoryPostgres(p.db, l),
 	}
 	l.Info("provider repositories initialized successfully")
 	return nil
@@ -137,6 +140,10 @@ func (p *Provider) initServiceProvider() error {
 		l.Error("provider service initialization failed: missing telemetry repository")
 		return apperror.ErrMissingDependency.WithMessage("missing telemetry repository")
 	}
+	if p.Repositories.RoleRepository == nil {
+		l.Error("provider service initialization failed: missing role repository")
+		return apperror.ErrMissingDependency.WithMessage("missing role repository")
+	}
 
 	casbinSrv, err := service.NewCasbinService(p.db, "internal/casbin/model.conf", l)
 	if err != nil {
@@ -144,11 +151,15 @@ func (p *Provider) initServiceProvider() error {
 		return apperror.ErrorHandler(err, apperror.ErrCodeInit, "failed to start casbin service").WithMessage("missing telemetry repository")
 	}
 
+	roleSrv := service.NewRoleService(p.Repositories.RoleRepository, l, p.config.Auth.DefaultNewUserRoleSlug)
+	userSrv := service.NewUserService(p.Repositories.UserRepository, roleSrv, casbinSrv, l)
+
 	p.Services = &ServiceProvider{
 		SensorService:    service.NewSensorService(p.Repositories.SensorRepository, l),
 		DeviceService:    service.NewDeviceService(p.Repositories.DeviceRepository, l),
-		UserService:      service.NewUserService(p.Repositories.UserRepository, l),
 		TelemetryService: service.NewTelemetryService(p.Repositories.TelemetryRepository, l),
+		UserService:      userSrv,
+		RoleService:      roleSrv,
 		CasbinService:    casbinSrv,
 	}
 	l.Info("provider services initialized successfully")

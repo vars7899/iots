@@ -18,6 +18,7 @@ type AppConfig struct {
 	Postgres *PostgresConfig `mapstructure:"postgres"`
 	Jwt      *JwtConfig      `mapstructure:"jwt"`
 	Redis    *RedisConfig    `mapstructure:"redis"`
+	Auth     *AuthConfig     `mapstructure:"auth"`
 }
 
 type ServerConfig struct {
@@ -48,6 +49,10 @@ type RedisConfig struct {
 	DB       int           `mapstructure:"db"`
 	Prefix   string        `mapstructure:"prefix"`
 	TTL      time.Duration `mapstructure:"ttl"`
+}
+
+type AuthConfig struct {
+	DefaultNewUserRoleSlug string `mapstructure:"default_new_user_role_slug"`
 }
 
 var envBindings = map[string]string{

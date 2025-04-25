@@ -28,15 +28,13 @@ func NewUserRepositoryPostgres(db *gorm.DB, baseLogger *zap.Logger) repository.U
 
 func (r *UserRepositoryPostgres) GetByID(ctx context.Context, userID uuid.UUID) (*model.User, error) {
 	var user model.User
-	if err := r.db.WithContext(ctx).Where("id = ?", userID).First(&user).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("id = ?", userID).Preload("Roles").Preload("Roles.Permissions").First(&user).Error; err != nil {
 		return nil, apperror.MapDBError(err, domain.EntityUser)
 	}
 	return &user, nil
 }
 
 func (r *UserRepositoryPostgres) Create(ctx context.Context, userData *model.User) (*model.User, error) {
-	// var createdUser model.User
-	fmt.Println("dddd", userData)
 	if err := r.db.WithContext(ctx).Model(&model.User{}).Clauses(clause.Returning{}).Create(&userData).Error; err != nil {
 		return nil, apperror.MapDBError(err, domain.EntitySensor)
 	}
@@ -170,7 +168,7 @@ func (r *UserRepositoryPostgres) AssignRole(ctx context.Context, userID, roleID 
         `, userID, roleID).Error; err != nil {
 			return err
 		}
-		return tx.Model(&model.User{}).Where("id = ?", userID).Preload("Roles").First(&user).Error
+		return tx.Model(&model.User{}).Where("id = ?", userID).Preload("Roles").Preload("Roles.Permissions").First(&user).Error
 	})
 
 	if err != nil {
@@ -184,7 +182,7 @@ func (r *UserRepositoryPostgres) AssignRoles(ctx context.Context, userID uuid.UU
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if len(roleIDs) == 0 {
-			return nil
+			return tx.Model(&model.User{}).Where("id = ?", userID).Preload("Roles.Permissions").First(&user).Error
 		}
 
 		query := "INSERT INTO user_roles (user_id, role_id) VALUES"
@@ -203,7 +201,7 @@ func (r *UserRepositoryPostgres) AssignRoles(ctx context.Context, userID uuid.UU
 			return err
 		}
 
-		return tx.Model(&model.User{}).Where("id = ?", userID).Preload("Roles").First(&user).Error
+		return tx.Model(&model.User{}).Where("id = ?", userID).Preload("Roles").Preload("Roles.Permissions").First(&user).Error
 	})
 
 	if err != nil {

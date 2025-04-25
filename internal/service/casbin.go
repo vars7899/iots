@@ -1,6 +1,8 @@
 package service
 
 import (
+	"strings"
+
 	"github.com/casbin/casbin/v2"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/google/uuid"
@@ -82,4 +84,8 @@ func (s *casbinService) SyncUserRoles(user *model.User) error {
 	}
 
 	return s.enforcer.SavePolicy()
+}
+
+func SplitPermissionCode(code string) []string {
+	return strings.Split(code, ":")
 }

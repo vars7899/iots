@@ -20,7 +20,8 @@ redis:
   db: 0
   prefix: "iot-redis-jti:"
   ttl: 4h15m  # related to refresh_token_ttl -> ttl = refresh_token_ttl + buffer
-
+auth:
+  default_new_user_role_slug: "viewer"
 
 
 

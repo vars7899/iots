@@ -72,7 +72,7 @@ type Role struct {
 	Slug        string         `gorm:"type:varchar(50);uniqueIndex;not null" json:"slug"`
 	Name        string         `gorm:"type:varchar(50);not null" json:"name"`
 	Description string         `gorm:"type:text" json:"description"`
-	Permissions []Permission   `gorm:"many2many:role_permissions;constraints:onUpdate:CASCADE,onDelete:CASCADE;" json:"permission"`
+	Permissions []Permission   `gorm:"many2many:role_permissions;constraints:onUpdate:CASCADE,onDelete:CASCADE;" json:"permissions"`
 	IsProtected bool           `gorm:"default:false" json:"is_protected"`
 	CreatedAt   time.Time      `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt   time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
