@@ -20,7 +20,6 @@ import (
 )
 
 type Provider struct {
-	TokenService token.TokenService
 	Repositories *RepositoryProvider
 	Services     *ServiceProvider
 	Helpers      *HelperProvider
@@ -44,6 +43,7 @@ type ServiceProvider struct {
 	DeviceService    *service.DeviceService
 	UserService      *service.UserService
 	TelemetryService *service.TelemetryService
+	CasbinService    service.CasbinService
 }
 
 type HelperProvider struct {
@@ -138,11 +138,18 @@ func (p *Provider) initServiceProvider() error {
 		return apperror.ErrMissingDependency.WithMessage("missing telemetry repository")
 	}
 
+	casbinSrv, err := service.NewCasbinService(p.db, "internal/casbin/model.conf", l)
+	if err != nil {
+		p.l.Error("failed to start casbin service", zap.Error(err))
+		return apperror.ErrorHandler(err, apperror.ErrCodeInit, "failed to start casbin service").WithMessage("missing telemetry repository")
+	}
+
 	p.Services = &ServiceProvider{
 		SensorService:    service.NewSensorService(p.Repositories.SensorRepository, l),
 		DeviceService:    service.NewDeviceService(p.Repositories.DeviceRepository, l),
 		UserService:      service.NewUserService(p.Repositories.UserRepository, l),
 		TelemetryService: service.NewTelemetryService(p.Repositories.TelemetryRepository, l),
+		CasbinService:    casbinSrv,
 	}
 	l.Info("provider services initialized successfully")
 	return nil

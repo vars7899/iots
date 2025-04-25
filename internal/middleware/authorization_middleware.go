@@ -3,7 +3,7 @@ package middleware
 import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	v1 "github.com/vars7899/iots/internal/api/v1"
+	"github.com/vars7899/iots/internal/api"
 	"github.com/vars7899/iots/internal/service"
 	"github.com/vars7899/iots/pkg/apperror"
 	"github.com/vars7899/iots/pkg/auth/token"
@@ -30,7 +30,7 @@ func CasbinAuthorizationMiddleware(casbinService service.CasbinService, logger *
 
 			// get resource and action from request
 			action := utils.GetActionFromHTTPRequest(c)
-			resource := utils.GetResourceFromRequest(c, v1.API_V1_PREFIX) // TODO: update this for other api versions, maybe use regex for generic version
+			resource := utils.GetResourceFromRequest(c, string(api.ApiV1)) // TODO: update this for other api versions, maybe use regex for generic version
 
 			allowed, err := casbinService.CheckPermission(userID, resource, action)
 			if err != nil {

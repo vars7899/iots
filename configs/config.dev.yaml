@@ -12,14 +12,14 @@ postgres:
 jwt:
   access_secret: ${JWT_ACCESS_SECRET}
   refresh_secret: ${JWT_REFRESH_SECRET}
-  access_token_ttl: 10s
-  refresh_token_ttl: 60s # update redis ttl accordingly always add buffer with this as base
+  access_token_ttl: 1h
+  refresh_token_ttl: 4h # update redis ttl accordingly always add buffer with this as base
 redis:
   address: localhost:6379
   password: ${REDIS_PASSWORD}
   db: 0
   prefix: "iot-redis-jti:"
-  ttl: 75s  # related to refresh_token_ttl -> ttl = refresh_token_ttl + buffer
+  ttl: 4h15m  # related to refresh_token_ttl -> ttl = refresh_token_ttl + buffer
 
 
 

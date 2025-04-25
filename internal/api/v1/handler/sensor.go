@@ -7,9 +7,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/vars7899/iots/internal/api/v1/dto"
+	"github.com/vars7899/iots/internal/cache"
 	"github.com/vars7899/iots/internal/domain"
+	"github.com/vars7899/iots/internal/middleware"
 	"github.com/vars7899/iots/internal/service"
 	"github.com/vars7899/iots/pkg/apperror"
+	"github.com/vars7899/iots/pkg/auth/token"
 	"github.com/vars7899/iots/pkg/di"
 	"github.com/vars7899/iots/pkg/logger"
 	"github.com/vars7899/iots/pkg/response"
@@ -19,16 +22,19 @@ import (
 
 type SensorHandler struct {
 	SensorService *service.SensorService
+	tokenService  token.TokenService
+	jtiService    cache.JTIStore
 	logger        *zap.Logger
 }
 
-func NewSensorHandler(dep *di.Provider, baseLogger *zap.Logger) *SensorHandler {
-	return &SensorHandler{SensorService: dep.Services.SensorService, logger: logger.Named(baseLogger, "SensorHandler")}
+func NewSensorHandler(deps *di.Provider, baseLogger *zap.Logger) *SensorHandler {
+	return &SensorHandler{SensorService: deps.Services.SensorService, tokenService: deps.Helpers.TokenService,
+		jtiService: deps.Helpers.JTIService, logger: logger.Named(baseLogger, "SensorHandler")}
 }
 
 func (h SensorHandler) RegisterRoutes(e *echo.Group) {
 	e.POST("", h.CreateSensor)
-	e.GET("", h.ListSensor)
+	e.GET("", h.ListSensor, middleware.JWT_JTI_Middleware(h.tokenService, h.jtiService, h.logger))
 	e.GET("/:id", h.GetSensor)
 	e.DELETE("/:id", h.DeleteSensor)
 	e.PATCH("/:id", h.UpdateSensor)

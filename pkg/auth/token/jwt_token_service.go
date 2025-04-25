@@ -1,6 +1,7 @@
 package token
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -73,6 +74,7 @@ func (s *JwtTokenService) GenerateAuthTokenSet(userID uuid.UUID, roles []string)
 }
 
 func (j *JwtTokenService) GenerateAccessToken(jti string, userID uuid.UUID, roles []string) (string, error) {
+	fmt.Println("ttttt ", j.config.AccessTokenTTL)
 	claims := AccessTokenClaims{
 		UserID: userID.String(),
 		Roles:  roles,
@@ -126,6 +128,7 @@ func (j *JwtTokenService) ParseAccessToken(tokenStr string) (*AccessTokenClaims,
 		return []byte(j.config.AccessSecret), nil
 	})
 	if err != nil {
+		fmt.Println(err)
 		return nil, apperror.ErrInvalidToken.WithMessage("failed to parse access token").Wrap(err)
 	}
 
