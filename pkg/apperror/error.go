@@ -104,6 +104,11 @@ const (
 
 	// Dependency & initialization errors (9xxx)
 	ErrCodeMissingDependency ErrorCode = "ERR-9000"
+	ErrCodeInit              ErrorCode = "ERR-9001"
+	ErrCodeStart             ErrorCode = "ERR-9002"
+	ErrCodeLoad              ErrorCode = "ERR-9003"
+	ErrCodeExec              ErrorCode = "ERR-9004"
+	ErrCodeShutdown          ErrorCode = "ERR-9005"
 )
 
 // CodeMessages maps error codes to default messages (can be overridden in i18n files)
@@ -187,6 +192,11 @@ var CodeMessages = map[ErrorCode]string{
 
 	// Dependency & initialization errors
 	ErrCodeMissingDependency: "Required dependency is missing",
+	ErrCodeInit:              "service: initialization failed",
+	ErrCodeStart:             "service: start failed",
+	ErrCodeLoad:              "service: load failure",
+	ErrCodeExec:              "service: execution failed",
+	ErrCodeShutdown:          "service: shutdown failed",
 }
 
 // HTTP status mapping for error codes
@@ -270,6 +280,11 @@ var CodeStatus = map[ErrorCode]int{
 
 	// Dependency & initialization errors
 	ErrCodeMissingDependency: StatusInternalServerError,
+	ErrCodeInit:              StatusInternalServerError,
+	ErrCodeStart:             StatusInternalServerError,
+	ErrCodeLoad:              StatusInternalServerError,
+	ErrCodeExec:              StatusInternalServerError,
+	ErrCodeShutdown:          StatusInternalServerError,
 }
 
 // AppError represents a standardized error for the application
@@ -556,6 +571,11 @@ var (
 
 	// Dependency & initialization errors
 	ErrMissingDependency = New(ErrCodeMissingDependency)
+	ErrInit              = New(ErrCodeInit)
+	ErrStart             = New(ErrCodeStart)
+	ErrLoad              = New(ErrCodeLoad)
+	ErrExec              = New(ErrCodeExec)
+	ErrShutdown          = New(ErrCodeShutdown)
 )
 
 func RepoErrorMsg(operation string, entity string) string {
