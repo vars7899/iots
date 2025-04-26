@@ -31,3 +31,9 @@ type LoginUserRequestDTO struct {
 }
 
 func (dto LoginUserRequestDTO) Validate() error { return validation.Validate.Struct(dto) }
+
+type RequestPasswordResetDTO struct {
+	Email string `json:"email" validate:"required,email,max=100"`
+}
+
+func (dto RequestPasswordResetDTO) Validate() error { return validation.Validate.Struct(dto) }

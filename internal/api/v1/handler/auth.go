@@ -44,6 +44,7 @@ func (h *AuthHandler) RegisterRoutes(e *echo.Group) {
 	e.POST("/login", h.Login)
 	e.POST("/refresh", h.Refresh)
 	e.POST("/logout", h.Logout, middleware.JWT_JTI_Middleware(h.tokenService, h.jtiService, h.log))
+	// e.POST("/request-password-reset")
 }
 
 func (h *AuthHandler) Login(c echo.Context) error {
@@ -256,6 +257,20 @@ func (h *AuthHandler) Refresh(c echo.Context) error {
 		"authentication_token_set": set,
 	})
 }
+
+// func (h *AuthHandler) RequestPasswordReset(c echo.Context) error {
+// 	var dto dto.RequestPasswordResetDTO
+// 	reqPath := utils.GetRequestUrlPath(c)
+
+// 	if err := utils.BindAndValidate(c, &dto); err != nil {
+// 		return apperror.ErrorHandler(err, apperror.ErrCodeValidation, "failed to parse and validate request body").WithPath(reqPath)
+// 	}
+
+// 	// 1. check if email exists
+// 	// 2. if not return error
+// 	// 3. if yes generate a request token for the email and send it to the user email as a link
+
+// }
 
 func (h *AuthHandler) bindAccessTokenToResponseHeader(c echo.Context, t string) {
 	c.Response().Header().Set(echo.HeaderAuthorization, "Bearer "+t)

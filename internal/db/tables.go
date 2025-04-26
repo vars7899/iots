@@ -17,4 +17,5 @@ var DB_Tables = []interface{}{
 	&model.AccessGroup{},
 	&model.DeviceEvent{},
 	&domain.GeoLocation{},
+	&model.PasswordResetToken{},
 }

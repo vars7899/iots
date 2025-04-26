@@ -7,4 +7,5 @@ const (
 	EntityTelemetry  = "telemetry"
 	EntityAccessRule = "access rule"
 	EntityRole       = "role"
+	EntityToken      = "token"
 )
