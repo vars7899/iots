@@ -19,6 +19,7 @@ type AppConfig struct {
 	Jwt      *JwtConfig      `mapstructure:"jwt"`
 	Redis    *RedisConfig    `mapstructure:"redis"`
 	Auth     *AuthConfig     `mapstructure:"auth"`
+	Frontend *FrontendConfig `mapstructure:"frontend"`
 }
 
 type ServerConfig struct {
@@ -52,7 +53,12 @@ type RedisConfig struct {
 }
 
 type AuthConfig struct {
-	DefaultNewUserRoleSlug string `mapstructure:"default_new_user_role_slug"`
+	DefaultNewUserRoleSlug       string        `mapstructure:"default_new_user_role_slug"`
+	RequestResetPasswordTokenTTL time.Duration `mapstructure:"request_reset_password_token_ttl"`
+}
+
+type FrontendConfig struct {
+	BaseUrl string `mapstructure:"base_url"`
 }
 
 var envBindings = map[string]string{
@@ -62,6 +68,7 @@ var envBindings = map[string]string{
 	"jwt.access_secret":    "JWT_ACCESS_SECRET",
 	"jwt.refresh_secret":   "JWT_REFRESH_SECRET",
 	"redis.password":       "REDIS_PASSWORD",
+	"frontend.base_url":    "FRONTEND_BASE_URL",
 }
 
 func Load(filename string, filetype string, path string, baseLogger *zap.Logger) error {

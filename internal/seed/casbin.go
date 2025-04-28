@@ -2,7 +2,7 @@ package seed
 
 import (
 	"github.com/vars7899/iots/internal/domain/model"
-	"github.com/vars7899/iots/internal/service"
+	"github.com/vars7899/iots/pkg/auth"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -95,7 +95,7 @@ var rolePermissions = map[string][]string{
 	},
 }
 
-func SeedRolesAndPermission(db *gorm.DB, casbinService service.CasbinService, logger *zap.Logger) error {
+func SeedRolesAndPermission(db *gorm.DB, accessControlService auth.AccessControlService, logger *zap.Logger) error {
 	logger.Info("Seeding roles and permissions")
 
 	for _, permission := range permissions {
@@ -141,7 +141,7 @@ func SeedRolesAndPermission(db *gorm.DB, casbinService service.CasbinService, lo
 		for _, permCode := range permCodes {
 			// Split permission code into resource and action
 			// Format: resource:action (e.g., "users:read")
-			parts := service.SplitPermissionCode(permCode)
+			parts := auth.SplitPermissionCode(permCode)
 			if len(parts) != 2 {
 				logger.Warn("Invalid permission code format", zap.String("code", permCode))
 				continue
@@ -151,7 +151,7 @@ func SeedRolesAndPermission(db *gorm.DB, casbinService service.CasbinService, lo
 			action := parts[1]
 
 			// Add policy to Casbin
-			_, err := casbinService.AddPolicy(roleSlug, resource, action)
+			_, err := accessControlService.AddPolicy(roleSlug, resource, action)
 			if err != nil {
 				logger.Error("Failed to add Casbin policy",
 					zap.String("role", roleSlug),
@@ -187,7 +187,7 @@ func SeedRolesAndPermission(db *gorm.DB, casbinService service.CasbinService, lo
 		}
 
 		// Set password
-		if err := adminUser.SetPassword("Admin@123"); err != nil {
+		if err := adminUser.HashPassword("Admin@123"); err != nil {
 			logger.Error("Failed to set admin password", zap.Error(err))
 			return err
 		}
@@ -199,14 +199,14 @@ func SeedRolesAndPermission(db *gorm.DB, casbinService service.CasbinService, lo
 		}
 
 		// Sync admin user with Casbin
-		if err := casbinService.SyncUserRoles(&adminUser); err != nil {
+		if err := accessControlService.SyncUserRoles(&adminUser); err != nil {
 			logger.Error("Failed to sync admin user roles with Casbin", zap.Error(err))
 			return err
 		}
 	}
 
 	// Save all policies to Casbin
-	if err := casbinService.LoadPolicy(); err != nil {
+	if err := accessControlService.LoadPolicy(); err != nil {
 		logger.Error("Failed to load Casbin policies", zap.Error(err))
 		return err
 	}

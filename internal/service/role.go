@@ -19,7 +19,7 @@ type roleService struct {
 	defaultRoleSlug string
 }
 
-func NewRoleService(r repository.RoleRepository, baseLogger *zap.Logger, defaultRoleSlug string) RoleService {
+func NewRoleService(r repository.RoleRepository, defaultRoleSlug string, baseLogger *zap.Logger) RoleService {
 	return &roleService{
 		roleRepo:        r,
 		logger:          logger.Named(baseLogger, "RoleService"),

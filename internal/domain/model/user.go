@@ -43,7 +43,7 @@ func (u *User) PublicView() *UserPublicView {
 	}
 }
 
-func (u *User) SetPassword(raw string) error {
+func (u *User) HashPassword(raw string) error {
 	hashed, err := bcrypt.GenerateFromPassword([]byte(raw), bcrypt.DefaultCost)
 	if err != nil {
 		return err

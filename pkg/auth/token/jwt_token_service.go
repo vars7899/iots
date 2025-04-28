@@ -18,15 +18,12 @@ type JwtTokenService struct {
 }
 
 type AccessTokenClaims struct {
-	UserID string   `json:"sub"`
-	Roles  []string `json:"roles"`
+	Roles []string `json:"roles"`
 
 	jwt.RegisteredClaims // includes exp, iat, iss, etc.
 }
 
 type RefreshTokenClaims struct {
-	UserID string `json:"sub"`
-
 	jwt.RegisteredClaims // includes exp, iat, iss, etc.
 }
 
@@ -74,10 +71,8 @@ func (s *JwtTokenService) GenerateAuthTokenSet(userID uuid.UUID, roles []string)
 }
 
 func (j *JwtTokenService) GenerateAccessToken(jti string, userID uuid.UUID, roles []string) (string, error) {
-	fmt.Println("ttttt ", j.config.AccessTokenTTL)
 	claims := AccessTokenClaims{
-		UserID: userID.String(),
-		Roles:  roles,
+		Roles: roles,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.config.AccessTokenTTL)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -93,7 +88,6 @@ func (j *JwtTokenService) GenerateAccessToken(jti string, userID uuid.UUID, role
 
 func (j *JwtTokenService) GenerateRefreshToken(jti string, userID uuid.UUID) (string, error) {
 	claims := RefreshTokenClaims{
-		UserID: userID.String(),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.config.RefreshTokenTTL)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

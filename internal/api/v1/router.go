@@ -7,45 +7,47 @@ import (
 	"github.com/vars7899/iots/internal/middleware"
 	"github.com/vars7899/iots/pkg/di"
 	"github.com/vars7899/iots/pkg/logger"
-	"go.uber.org/zap"
 )
 
-// var AuthMiddleware
-
-func RegisterRoutes(e *echo.Echo, deps *di.Provider, baseLogger *zap.Logger) {
-	l := logger.Named(baseLogger, "v1Router")
-	r := api.NewAPIRouter(e, string(api.ApiV1), baseLogger)
-
-	authMiddleware := middleware.AuthRequired(e, deps.Helpers.TokenService, deps.Helpers.JTIService, deps.Services.CasbinService, l)
-
-	// Middleware
-	r.AddMiddleware(middleware.ErrorHandler(l))
-
-	// Routes
-	r.AddRoute(api.RouteConfig{
-		Prefix:  "/device",
-		Handler: handler.NewDeviceHandler(deps, l),
-	})
-	r.AddRoute(api.RouteConfig{
-		Prefix:     "/sensor",
-		Handler:    handler.NewSensorHandler(deps, l),
-		Middleware: []echo.MiddlewareFunc{authMiddleware},
-	})
-	r.AddRoute(api.RouteConfig{
-		Prefix:  "/auth",
-		Handler: handler.NewAuthHandler(deps, l),
-	})
-
-	if deps.WsHub == nil {
-		l.Fatal("Websocket Hub is nil in DI provider")
-		return
+func RegisterRoutes(e *echo.Echo, container *di.AppContainer) {
+	if e == nil {
+		panic("RegisterRoutes: missing dependency 'echo'")
+	}
+	if container == nil {
+		panic("RegisterRoutes: missing dependency 'container'")
+	}
+	if container.WsHub == nil {
+		panic("RegisterRoutes: missing dependency 'WsHub' for websocket routes")
 	}
 
-	telemetryWsHandler := handler.NewTelemetryWebSocketHandler(deps, l)
+	logger := logger.Named(container.Logger, "v1Router")
+	manager := api.NewAPIRouterManager(e, string(api.ApiV1), logger)
 
-	r.AddWebsocketRoute(api.WsRouteConfig{
-		Path:    "/sensor/telemetry",
-		Handler: telemetryWsHandler.HandleConnection,
+	// Middleware instance
+	authMiddlewareSlice := middleware.NewAuthMiddleware(container.CoreServices.AuthTokenService, container.CoreServices.AccessControlService, logger)
+
+	// Global Middleware
+	manager.AddMiddleware(middleware.ErrorHandler(logger))
+
+	// V1 Routes
+	manager.AddRoute(api.RouteConfig{
+		Prefix:  "/auth",
+		Handler: handler.NewAuthHandler(container, logger),
 	})
-	r.Mount()
+	manager.AddRoute(api.RouteConfig{
+		Prefix:     "/device",
+		Handler:    handler.NewDeviceHandler(container, logger),
+		Middleware: authMiddlewareSlice,
+	})
+	manager.AddRoute(api.RouteConfig{
+		Prefix:     "/sensor",
+		Handler:    handler.NewSensorHandler(container, logger),
+		Middleware: authMiddlewareSlice,
+	})
+	// V1 Websocket upgraded routes
+	manager.AddWebsocketRoute(api.WsRouteConfig{
+		Path:    "/sensor/telemetry",
+		Handler: handler.NewTelemetryWebSocketHandler(container, logger).HandleConnection,
+	})
+	manager.Mount()
 }

@@ -8,8 +8,8 @@ import (
 )
 
 type ResetPasswordTokenRepository interface {
-	Create(ctx context.Context, tokenData *model.PasswordResetToken) (*model.PasswordResetToken, error)
-	FindByToken(ctx context.Context, tokenStr string) (*model.PasswordResetToken, error)
+	Create(ctx context.Context, tokenData *model.ResetPasswordToken) (*model.ResetPasswordToken, error)
+	FindByToken(ctx context.Context, tokenStr string) (*model.ResetPasswordToken, error)
 	DeleteByUserID(ctx context.Context, userID uuid.UUID) error
 	DeleteExpired(ctx context.Context) error
 }

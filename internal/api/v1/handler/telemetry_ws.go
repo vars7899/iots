@@ -11,12 +11,12 @@ import (
 )
 
 type TelemetryWebSocketHandler struct {
-	deps *di.Provider
+	deps *di.AppContainer
 	hub  *ws.Hub
 	l    *zap.Logger
 }
 
-func NewTelemetryWebSocketHandler(deps *di.Provider, baseLogger *zap.Logger) *TelemetryWebSocketHandler {
+func NewTelemetryWebSocketHandler(deps *di.AppContainer, baseLogger *zap.Logger) *TelemetryWebSocketHandler {
 	return &TelemetryWebSocketHandler{
 		deps: deps,
 		hub:  deps.WsHub,

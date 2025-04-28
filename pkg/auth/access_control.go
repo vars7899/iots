@@ -1,4 +1,4 @@
-package service
+package auth
 
 import (
 	"strings"
@@ -13,14 +13,14 @@ import (
 	"gorm.io/gorm"
 )
 
-type casbinService struct {
+type accessControlService struct {
 	enforcer *casbin.Enforcer
 	db       *gorm.DB
 	l        *zap.Logger
 }
 
-func NewCasbinService(db *gorm.DB, modelPath string, baseLogger *zap.Logger) (CasbinService, error) {
-	l := logger.Named(baseLogger, "CasbinService")
+func NewAccessControlService(db *gorm.DB, modelPath string, baseLogger *zap.Logger) (AccessControlService, error) {
+	l := logger.Named(baseLogger, "AccessControlService")
 
 	adapter, err := gormadapter.NewAdapterByDB(db)
 	if err != nil {
@@ -39,42 +39,42 @@ func NewCasbinService(db *gorm.DB, modelPath string, baseLogger *zap.Logger) (Ca
 		return nil, apperror.ErrLoad.WithMessage("failed to load casbin service policies").Wrap(err).AsInternal()
 	}
 
-	return &casbinService{
+	return &accessControlService{
 		enforcer: enforcer,
 		db:       db,
 		l:        l,
 	}, nil
 }
 
-func (s *casbinService) Enforce(subject string, object string, action string) (bool, error) {
+func (s *accessControlService) Enforce(subject string, object string, action string) (bool, error) {
 	return s.enforcer.Enforce(subject, object, action)
 }
 
-func (s *casbinService) LoadPolicy() error {
+func (s *accessControlService) LoadPolicy() error {
 	return s.enforcer.LoadPolicy()
 }
 
-func (s *casbinService) AddRoleForUser(user string, role string) (bool, error) {
+func (s *accessControlService) AddRoleForUser(user string, role string) (bool, error) {
 	return s.enforcer.AddRoleForUser(user, role)
 }
 
-func (s *casbinService) DeleteRoleForUser(user string, role string) (bool, error) {
+func (s *accessControlService) DeleteRoleForUser(user string, role string) (bool, error) {
 	return s.enforcer.DeleteRoleForUser(user, role)
 }
 
-func (s *casbinService) AddPolicy(role string, resource string, action string) (bool, error) {
+func (s *accessControlService) AddPolicy(role string, resource string, action string) (bool, error) {
 	return s.enforcer.AddPolicy(role, resource, action)
 }
 
-func (s *casbinService) RemovePolicy(role string, resource string, action string) (bool, error) {
+func (s *accessControlService) RemovePolicy(role string, resource string, action string) (bool, error) {
 	return s.enforcer.RemovePolicy(role, resource, action)
 }
 
-func (s *casbinService) CheckPermission(userID uuid.UUID, resource string, action string) (bool, error) {
+func (s *accessControlService) CheckPermission(userID uuid.UUID, resource string, action string) (bool, error) {
 	return s.enforcer.Enforce(userID.String(), resource, action)
 }
 
-func (s *casbinService) SyncUserRoles(user *model.User) error {
+func (s *accessControlService) SyncUserRoles(user *model.User) error {
 	s.enforcer.DeleteRolesForUser(user.ID.String())
 
 	for _, role := range user.Roles {

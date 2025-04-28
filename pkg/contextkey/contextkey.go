@@ -10,7 +10,7 @@ const (
 	JTIUsed    Key = "used"
 	JTIRevoked Key = "revoked"
 
-	Auth_refreshToken = "auth_refresh_token"
+	AuthRefreshToken = "auth_refresh_token"
 
 	// Casbin user action
 	ActionRead   Key = "read"

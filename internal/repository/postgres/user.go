@@ -55,6 +55,22 @@ func (r *UserRepositoryPostgres) Update(ctx context.Context, userData *model.Use
 	return &updatedUser, nil
 }
 
+func (r *UserRepositoryPostgres) SetPassword(ctx context.Context, userID uuid.UUID, newPasswordHash string) (*model.User, error) {
+	var updatedUser model.User
+
+	tx := r.db.WithContext(ctx).Model(&model.User{}).Clauses(clause.Returning{}).Where("id = ?", userID).Updates(map[string]interface{}{
+		"password": newPasswordHash,
+	}).Scan(&updatedUser)
+
+	if tx.Error != nil {
+		return nil, apperror.MapDBError(tx.Error, domain.EntityUser)
+	}
+	if tx.RowsAffected == 0 {
+		return nil, notFoundErr(domain.EntityUser, "update password")
+	}
+	return &updatedUser, nil
+}
+
 func (r *UserRepositoryPostgres) HardDelete(ctx context.Context, userID uuid.UUID) error {
 	tx := r.db.WithContext(ctx).Unscoped().Where("id = ?", userID).Delete(&model.User{})
 	if tx.Error != nil {

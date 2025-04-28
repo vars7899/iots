@@ -22,6 +22,9 @@ redis:
   ttl: 4h15m  # related to refresh_token_ttl -> ttl = refresh_token_ttl + buffer
 auth:
   default_new_user_role_slug: "viewer"
+  request_reset_password_token_ttl: 30m
+frontend:
+  base_url: ${FRONTEND_BASE_URL}
 
 
 

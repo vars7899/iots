@@ -23,6 +23,13 @@ func (dto RegisterUserRequestDTO) AsModel() *model.User {
 	}
 }
 
+type LoginCredentials struct {
+	Email       string
+	Username    string
+	PhoneNumber string
+	Password    string
+}
+
 type LoginUserRequestDTO struct {
 	Email       string `json:"email,omitempty" validate:"omitempty,email"`
 	PhoneNumber string `json:"phone_number,omitempty" validate:"omitempty,e164"`
@@ -32,8 +39,24 @@ type LoginUserRequestDTO struct {
 
 func (dto LoginUserRequestDTO) Validate() error { return validation.Validate.Struct(dto) }
 
+func (dto LoginUserRequestDTO) AsModel() *LoginCredentials {
+	return &LoginCredentials{
+		Email:       dto.Email,
+		Username:    dto.UserName,
+		PhoneNumber: dto.PhoneNumber,
+		Password:    dto.Password,
+	}
+}
+
 type RequestPasswordResetDTO struct {
 	Email string `json:"email" validate:"required,email,max=100"`
 }
 
 func (dto RequestPasswordResetDTO) Validate() error { return validation.Validate.Struct(dto) }
+
+type ResetPasswordDTO struct {
+	Token       string `json:"token" validate:"required"`
+	NewPassword string `json:"new_password" validate:"required,min=8,max=128"`
+}
+
+func (dto ResetPasswordDTO) Validate() error { return validation.Validate.Struct(dto) }

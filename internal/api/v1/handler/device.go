@@ -21,14 +21,14 @@ type DeviceHandler struct {
 	log           *zap.Logger
 }
 
-func NewDeviceHandler(dep *di.Provider, baseLogger *zap.Logger) *DeviceHandler {
+func NewDeviceHandler(dep *di.AppContainer, baseLogger *zap.Logger) *DeviceHandler {
 	return &DeviceHandler{
 		DeviceService: dep.Services.DeviceService,
 		log:           logger.Named(baseLogger, "handler.deviceHandler"),
 	}
 }
 
-func (h *DeviceHandler) RegisterRoutes(e *echo.Group) {
+func (h *DeviceHandler) SetupRoutes(e *echo.Group) {
 	e.POST("", h.CreateNewDevice)
 	e.GET("/:id", h.GetDeviceByID)
 	e.DELETE("/:id", h.DeleteDeviceByID)

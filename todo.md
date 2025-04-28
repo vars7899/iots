@@ -165,19 +165,16 @@ Want to tackle any of these now? I can help scaffold models, endpoints, or DB mi
   - [] invalidate & blacklist the authorization bearer token
 
 
-### April 21
  - ✅ Token Revocation / Blacklist (optional)
  - ✅ Store refresh token jti in DB or cache (e.g., Redis).
  - ✅ Revoke on logout or suspicious activity.
  - ✅ Compare jti on refresh.
+ - ✅ Add JWT Middleware for Role-Based Access
+ - ✅ Extend middleware.JwtTokenMiddleware to include roles and permissions.
 
 ### April 22
 
-Add JWT Middleware for Role-Based Access
 
-Extend middleware.JwtTokenMiddleware to include roles and permissions.
-
-Add HasRole, HasPermission helper middlewares.
 
 Custom Claims in JWT
 

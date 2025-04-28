@@ -26,12 +26,12 @@ type SensorHandler struct {
 	logger        *zap.Logger
 }
 
-func NewSensorHandler(deps *di.Provider, baseLogger *zap.Logger) *SensorHandler {
-	return &SensorHandler{SensorService: deps.Services.SensorService, tokenService: deps.Helpers.TokenService,
-		jtiService: deps.Helpers.JTIService, logger: logger.Named(baseLogger, "SensorHandler")}
+func NewSensorHandler(deps *di.AppContainer, baseLogger *zap.Logger) *SensorHandler {
+	return &SensorHandler{SensorService: deps.Services.SensorService, tokenService: deps.CoreServices.JWTTokenService,
+		jtiService: deps.CoreServices.JTIStoreService, logger: logger.Named(baseLogger, "SensorHandler")}
 }
 
-func (h SensorHandler) RegisterRoutes(e *echo.Group) {
+func (h SensorHandler) SetupRoutes(e *echo.Group) {
 	e.POST("", h.CreateSensor)
 	e.GET("", h.ListSensor)
 	e.GET("/:id", h.GetSensor)

@@ -9,8 +9,8 @@ type UserHandler struct {
 	UserService *service.UserService
 }
 
-func NewUserHandler(dep di.Provider) *UserHandler {
-	return &UserHandler{UserService: dep.Services.UserService}
+func NewUserHandler(deps di.AppContainer) *UserHandler {
+	return &UserHandler{}
 }
 
 // func (h *UserHandler) RegisterRoutes(e *echo.Group) {

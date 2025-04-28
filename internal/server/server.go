@@ -16,12 +16,12 @@ import (
 
 type Server struct {
 	echo     *echo.Echo
-	Provider *di.Provider
+	Provider *di.AppContainer
 	logger   *zap.Logger
 	config   *config.ServerConfig
 }
 
-func NewServer(provider *di.Provider, baseLogger *zap.Logger, configs ...*config.ServerConfig) *Server {
+func NewServer(provider *di.AppContainer, baseLogger *zap.Logger, configs ...*config.ServerConfig) *Server {
 	cfg := setServerConfig(configs...)
 
 	e := echo.New()

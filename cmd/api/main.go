@@ -54,14 +54,14 @@ func main() {
 	}
 
 	// Load dependencies
-	deps, err := di.NewProvider(appCtx, wg, gormDB.DB(), logger.L(), config.GlobalConfig)
+	deps, err := di.NewAppContainer(appCtx, wg, gormDB.DB(), config.GlobalConfig, logger.L())
 	if err != nil {
 		logger.L().Fatal("failed to load provider dependencies", zap.Error(err))
 		return
 	}
 
 	if !config.InProd() {
-		if err := seed.SeedRolesAndPermission(gormDB.DB(), deps.Services.CasbinService, logger.L()); err != nil {
+		if err := seed.SeedRolesAndPermission(gormDB.DB(), deps.CoreServices.AccessControlService, logger.L()); err != nil {
 			logger.L().Fatal("failed to seed roles and permissions", zap.Error(err))
 			return
 		}
@@ -70,7 +70,7 @@ func main() {
 	s := server.NewServer(deps, logger.L(), config.GlobalConfig.Server)
 
 	// mount router(s)
-	v1.RegisterRoutes(s.E(), s.Provider, logger.L())
+	v1.RegisterRoutes(s.E(), s.Provider)
 
 	// Start http server
 	s.Start()

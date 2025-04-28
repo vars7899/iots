@@ -14,92 +14,39 @@ import (
 	"go.uber.org/zap"
 )
 
-type UserService struct {
-	userRepo      repository.UserRepository
-	roleService   RoleService
-	casbinService CasbinService
-	logger        *zap.Logger
+type userService struct {
+	userRepo repository.UserRepository
+	logger   *zap.Logger
 }
 
-func NewUserService(r repository.UserRepository, roleService RoleService, casbinService CasbinService, baseLogger *zap.Logger) *UserService {
-	return &UserService{
-		userRepo:      r,
-		roleService:   roleService,
-		casbinService: casbinService,
-		logger:        logger.Named(baseLogger, "UserService"),
+func NewUserService(userRepo repository.UserRepository, baseLogger *zap.Logger) UserService {
+	return &userService{
+		userRepo: userRepo,
+		logger:   logger.Named(baseLogger, "UserService"),
 	}
 }
 
-func (s *UserService) CreateUser(ctx context.Context, userData *model.User) (*model.User, error) {
-	// check email
-	emailAlreadyTaken, err := s.userRepo.ExistByEmail(ctx, userData.Email)
+func (s *userService) CreateUser(ctx context.Context, user *model.User) (*model.User, error) {
+	if err := s.checkEmailNotTaken(ctx, user.Email); err != nil {
+		return nil, err
+	}
+	if err := s.checkUsernameNotTaken(ctx, user.Username); err != nil {
+		return nil, err
+	}
+	if err := s.checkPhoneNumberNotTaken(ctx, user.PhoneNumber); err != nil {
+		return nil, err
+	}
+	if err := user.HashPassword(user.Password); err != nil {
+		return nil, apperror.ErrorHandler(err, apperror.ErrCodeInternal, "failed to set user password")
+	}
+	createdUser, err := s.userRepo.Create(ctx, user)
 	if err != nil {
-		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, "failed to create user")
+		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBInsert, "failed to create user in database")
 	}
-	if emailAlreadyTaken {
-		return nil, apperror.ErrEmailAlreadyExist.WithMessage("failed to create user: email already taken")
-	}
-	// check username
-	usernameAlreadyTaken, err := s.userRepo.ExistByUserName(ctx, userData.Username)
-	if err != nil {
-		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, "failed to create user")
-	}
-	if usernameAlreadyTaken {
-		return nil, apperror.ErrUsernameAlreadyExists.WithMessage("failed to create user: username already taken")
-	}
-	// check phone number
-	phoneNumberAlreadyTaken, err := s.userRepo.ExistByPhoneNumber(ctx, userData.PhoneNumber)
-	if err != nil {
-		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, "failed to create user")
-	}
-	if phoneNumberAlreadyTaken {
-		return nil, apperror.ErrPhoneNumberAlreadyExists.WithMessage("failed to create user: phone number already taken")
-	}
-	// hash password
-	if err := userData.SetPassword(userData.Password); err != nil {
-		return nil, apperror.ErrorHandler(err, apperror.ErrCodeInternal, "failed to create user: unable to store credentials")
-	}
-	// create user row
-	createdUser, err := s.userRepo.Create(ctx, userData)
-	if err != nil {
-		return nil, apperror.ErrorHandler(err, apperror.ErrCodeInternal, "failed to create user")
-	}
-
-	defaultRoleID, err := s.roleService.GetDefaultRoleID(ctx)
-	if err != nil {
-		s.logger.Error("Failed to assign default role", zap.String("userID", createdUser.ID.String()), zap.Error(err))
-		rollbackErr := s.userRepo.HardDelete(ctx, createdUser.ID)
-		if rollbackErr != nil {
-			s.logger.Error("Failed to rollback user creation after role assignment error", zap.String("userID", createdUser.ID.String()), zap.Error(rollbackErr))
-		}
-		return nil, apperror.ErrInternal.Wrap(err).WithMessage("failed to assign default role to user")
-	}
-
-	userWithRoles, err := s.userRepo.AssignRoles(ctx, createdUser.ID, []uuid.UUID{defaultRoleID})
-	if err != nil {
-		s.logger.Error("Failed to assign default role in repository", zap.String("userID", createdUser.ID.String()), zap.String("roleID", defaultRoleID.String()), zap.Error(err))
-		rollbackErr := s.userRepo.HardDelete(ctx, createdUser.ID) // Example: attempt rollback
-		if rollbackErr != nil {
-			s.logger.Error("Failed to rollback user creation after role assignment error", zap.String("userID", createdUser.ID.String()), zap.Error(rollbackErr))
-		}
-		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBInsert, "failed to assign default role to user")
-	}
-
-	if err := s.casbinService.SyncUserRoles(userWithRoles); err != nil {
-		s.logger.Error("Failed to sync user roles with Casbin after creation",
-			zap.String("userID", userWithRoles.ID.String()),
-			zap.Error(err))
-		// Decide how to handle this error. It means the user is created and has roles in DB,
-		// but Casbin's view might be out of sync. This is serious for auth.
-		// You might want to log, alert, and potentially disable the user account until fixed.
-		// For now, we'll log and let the user creation proceed, but be aware of the auth risk.
-		// A background worker could periodically sync or you could implement retry logic.
-	}
-
-	return userWithRoles, nil
+	return createdUser, nil
 }
 
-func (s *UserService) GetUserByID(ctx context.Context, userID uuid.UUID) (*model.User, error) {
+func (s *userService) GetUserByID(ctx context.Context, userID uuid.UUID) (*model.User, error) {
 	userData, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, fmt.Sprintf("failed to fetch user data with ID %s", userID))
@@ -107,7 +54,7 @@ func (s *UserService) GetUserByID(ctx context.Context, userID uuid.UUID) (*model
 	return userData, nil
 }
 
-func (s *UserService) UpdateUser(ctx context.Context, userID uuid.UUID, userData *model.User) (*model.User, error) {
+func (s *userService) UpdateUser(ctx context.Context, userID uuid.UUID, userData *model.User) (*model.User, error) {
 	userData, err := s.userRepo.Update(ctx, userData)
 	if err != nil {
 		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate, "failed to update user data")
@@ -115,14 +62,22 @@ func (s *UserService) UpdateUser(ctx context.Context, userID uuid.UUID, userData
 	return userData, nil
 }
 
-func (s *UserService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
+func (s *userService) SetPassword(ctx context.Context, userID uuid.UUID, newHashPassword string) (*model.User, error) {
+	userData, err := s.userRepo.SetPassword(ctx, userID, newHashPassword)
+	if err != nil {
+		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate, "failed to set new password")
+	}
+	return userData, nil
+}
+
+func (s *userService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 	if err := s.userRepo.Delete(ctx, userID); err != nil {
 		return apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, fmt.Sprintf("failed to delete user with ID %s", userID))
 	}
 	return nil
 }
 
-func (s *UserService) GetUser(ctx context.Context, filter dto.UserFilter) ([]*model.User, error) {
+func (s *userService) GetUser(ctx context.Context, filter dto.UserFilter) ([]*model.User, error) {
 	userList, err := s.userRepo.List(ctx, filter)
 	if err != nil {
 		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, "failed to get user")
@@ -130,29 +85,80 @@ func (s *UserService) GetUser(ctx context.Context, filter dto.UserFilter) ([]*mo
 	return userList, nil
 }
 
-func (s *UserService) SetLastLogin(ctx context.Context, userID uuid.UUID) error {
+func (s *userService) SetLastLogin(ctx context.Context, userID uuid.UUID) error {
 	if err := s.userRepo.SetLastLogin(ctx, userID, time.Now()); err != nil {
 		return apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, fmt.Sprintf("failed to set last login for user with ID %s", userID))
 	}
 	return nil
 }
 
-type LoginIdentifier struct {
-	Email       string
-	Username    string
-	PhoneNumber string
+func (s *userService) AssignUserRoles(ctx context.Context, userID uuid.UUID, roles []uuid.UUID) (*model.User, error) {
+	return s.userRepo.AssignRoles(ctx, userID, roles)
 }
 
-// UserService.go
-func (s *UserService) FindByLoginIdentifier(ctx context.Context, identifiers LoginIdentifier) (*model.User, error) {
-	if identifiers.Email != "" {
-		return s.userRepo.FindByEmail(ctx, identifiers.Email)
+// func (s *userService) RequestPasswordReset(ctx context.Context, email string) (*model.ResetPasswordToken, error) {
+// 	user, err := s.userRepo.FindByEmail(ctx, email)
+// 	if err != nil {
+// 		return nil, apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, "failed to fetch user by email")
+// 	}
+// 	if user == nil {
+// 		return nil, apperror.ErrNotFound.WithMessage("user not found")
+// 	}
+
+// 	token, err := s.resetPasswordTokenService.CreateToken(ctx, user.ID, 15*time.Minute)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	// later you can send email to user with token.Token here
+// 	return token, nil
+// }
+
+func (s *userService) HardDeleteUser(ctx context.Context, userID uuid.UUID) error {
+	return s.userRepo.HardDelete(ctx, userID)
+}
+
+func (s *userService) checkEmailNotTaken(ctx context.Context, email string) error {
+	taken, err := s.userRepo.ExistByEmail(ctx, email)
+	if err != nil {
+		// Wrap the DB error here with context
+		return apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, "failed to check email existence")
 	}
-	if identifiers.PhoneNumber != "" {
-		return s.userRepo.FindByPhoneNumber(ctx, identifiers.PhoneNumber)
+	if taken {
+		// Return the specific application error
+		return apperror.ErrEmailAlreadyExist.WithMessage("email already taken")
 	}
-	if identifiers.Username != "" {
-		return s.userRepo.FindByUserName(ctx, identifiers.Username)
+	return nil
+}
+
+func (s *userService) checkUsernameNotTaken(ctx context.Context, username string) error {
+	taken, err := s.userRepo.ExistByUserName(ctx, username)
+	if err != nil {
+		return apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, "failed to check username existence")
 	}
-	return nil, apperror.ErrInvalidCredentials.WithMessage("missing login identifier")
+	if taken {
+		return apperror.ErrUsernameAlreadyExists.WithMessage("username already taken")
+	}
+	return nil
+}
+
+func (s *userService) checkPhoneNumberNotTaken(ctx context.Context, phoneNumber string) error {
+	taken, err := s.userRepo.ExistByPhoneNumber(ctx, phoneNumber)
+	if err != nil {
+		return apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, "failed to check phone number existence")
+	}
+	if taken {
+		return apperror.ErrPhoneNumberAlreadyExists.WithMessage("phone number already taken")
+	}
+	return nil
+}
+
+func (s *userService) FindByEmail(ctx context.Context, email string) (*model.User, error) {
+	return s.userRepo.FindByEmail(ctx, email)
+}
+func (s *userService) FindByUserName(ctx context.Context, username string) (*model.User, error) {
+	return s.userRepo.FindByUserName(ctx, username)
+}
+func (s *userService) FindByPhoneNumber(ctx context.Context, phoneNumber string) (*model.User, error) {
+	return s.userRepo.FindByPhoneNumber(ctx, phoneNumber)
 }

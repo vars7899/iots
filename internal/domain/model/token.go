@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type PasswordResetToken struct {
+type ResetPasswordToken struct {
 	ID        uuid.UUID `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	UserID    uuid.UUID `json:"user_id" gorm:"type:uuid;not null;index"`
 	Token     string    `json:"token" gorm:"type:varchar(255);not null;uniqueIndex"`
@@ -14,6 +14,6 @@ type PasswordResetToken struct {
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 }
 
-func (t *PasswordResetToken) IsExpired() bool {
+func (t *ResetPasswordToken) IsExpired() bool {
 	return time.Now().After(t.ExpiresAt)
 }

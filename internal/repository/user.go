@@ -13,6 +13,7 @@ type UserRepository interface {
 	Create(ctx context.Context, user *model.User) (*model.User, error)                            // ✅
 	GetByID(ctx context.Context, userID uuid.UUID) (*model.User, error)                           // ✅
 	Update(ctx context.Context, user *model.User) (*model.User, error)                            // ✅
+	SetPassword(ctx context.Context, userID uuid.UUID, passwordHash string) (*model.User, error)  // ✅
 	HardDelete(ctx context.Context, userID uuid.UUID) error                                       // ✅
 	Delete(ctx context.Context, userID uuid.UUID) error                                           // ✅
 	Restore(ctx context.Context, userID uuid.UUID) error                                          // ✅
@@ -33,5 +34,4 @@ type UserRepository interface {
 	GetPermissions(ctx context.Context, userID uuid.UUID) ([]*model.Permission, error)            // ✅
 	List(ctx context.Context, filter dto.UserFilter) ([]*model.User, error)                       // ✅
 	Count(ctx context.Context, filter dto.UserFilter) (int64, error)                              // ✅
-	// SetPassword(ctx context.Context, userID uuid.UUID, newHashedPassword string) error
 }
