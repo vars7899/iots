@@ -45,3 +45,7 @@ type AuthService interface {
 	RequestPasswordReset(ctx context.Context, email string) (*model.ResetPasswordToken, *string, error)
 	ResetPassword(ctx context.Context, resetToken, newRawPassword string) error
 }
+
+type DeviceService interface {
+	CreateDevice(ctx context.Context, device *model.Device) (*model.Device, error)
+}

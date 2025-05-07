@@ -24,6 +24,7 @@ var permissions = []model.Permission{
 	{Code: "sensor:assign", Name: "Assign Sensors to User/Location"},
 
 	// Device management
+	{Code: "device:register", Name: "Register new device"},
 	{Code: "device:read", Name: "Read Devices"},
 	{Code: "device:create", Name: "Create Devices"},
 	{Code: "device:update", Name: "Update Devices"},
@@ -83,6 +84,7 @@ var rolePermissions = map[string][]string{
 	"admin": {
 		"user:read", "user:create", "user:update", "user:delete",
 		"sensor:read", "sensor:create", "sensor:update", "sensor:delete", "sensor:configure",
+		"device:register",
 	},
 	"viewer": {
 		"user:read", "sensor:read", "sensor:create",

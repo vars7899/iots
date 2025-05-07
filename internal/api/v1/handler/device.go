@@ -1,12 +1,12 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/vars7899/iots/config"
 	"github.com/vars7899/iots/internal/api/v1/dto"
+	"github.com/vars7899/iots/internal/middleware"
 	"github.com/vars7899/iots/internal/service"
 	"github.com/vars7899/iots/pkg/apperror"
 	"github.com/vars7899/iots/pkg/di"
@@ -17,22 +17,27 @@ import (
 )
 
 type DeviceHandler struct {
-	DeviceService *service.DeviceService
-	log           *zap.Logger
+	DeviceService service.DeviceService
+	middleware    *middleware.MiddlewareRegistry
+	logger        *zap.Logger
 }
 
-func NewDeviceHandler(dep *di.AppContainer, baseLogger *zap.Logger) *DeviceHandler {
+func NewDeviceHandler(container *di.AppContainer, baseLogger *zap.Logger) *DeviceHandler {
 	return &DeviceHandler{
-		DeviceService: dep.Services.DeviceService,
-		log:           logger.Named(baseLogger, "handler.deviceHandler"),
+		DeviceService: container.Services.DeviceService,
+		middleware:    container.Api.Middleware,
+		logger:        logger.Named(baseLogger, "DeviceHandler"),
 	}
 }
 
 func (h *DeviceHandler) SetupRoutes(e *echo.Group) {
-	e.POST("", h.CreateNewDevice)
-	e.GET("/:id", h.GetDeviceByID)
-	e.DELETE("/:id", h.DeleteDeviceByID)
-	e.PATCH("/:id", h.UpdateDevice)
+	// e.POST("", h.CreateNewDevice)
+	// e.GET("/:id", h.GetDeviceByID)
+	// e.DELETE("/:id", h.DeleteDeviceByID)
+	// e.PATCH("/:id", h.UpdateDevice)
+
+	e.POST("/register", h.RegisterDevice, h.middleware.PermissionRequired("device", "register"))
+
 	// bulk operation endpoints
 	// TODO: add middleware to protect only for admin
 	// e.POST("/bulk", h.CreateNewDeviceInBulk)
@@ -43,100 +48,139 @@ func (h *DeviceHandler) SetupRoutes(e *echo.Group) {
 	// e.PATCH("/:id/online", h.MarkDeviceOnline)
 	// e.PATCH("/:id/offline", h.MarkDeviceOffline)
 
+	// Provision flow
+	e.POST("/provision", h.middleware.PermissionRequired("device", "provision"))
+
 }
 
-func (h *DeviceHandler) CreateNewDevice(c echo.Context) error {
-	var dto dto.CreateNewDeviceDTO
-	reqPath := utils.GetRequestUrlPath(c)
+func (h *DeviceHandler) ProvisionDevice(c echo.Context) error {
+	var dto *dto.ProvisionDeviceRequest
 
-	// Bind body request and validate fields
+	ctx := c.Request().Context()
+	path := utils.GetRequestUrlPath(c)
+
+	if err := utils.BindAndValidate(c, dto); err != nil {
+		return err
+	}
+}
+
+// func (h *DeviceHandler) CreateNewDevice(c echo.Context) error {
+// 	var dto dto.CreateNewDeviceDTO
+// 	reqPath := utils.GetRequestUrlPath(c)
+
+// 	// Bind body request and validate fields
+// 	if err := utils.BindAndValidate(c, &dto); err != nil {
+// 		return err
+// 	}
+
+// 	createdDevice, err := h.DeviceService.CreateDevice(c.Request().Context(), dto.AsModel())
+// 	if err != nil {
+// 		return apperror.ErrorHandler(err, apperror.ErrCodeDBInsert, "failed to insert device").WithPath(reqPath).Wrap(err)
+// 	}
+
+// 	h.log.Debug("device created", zap.String("device_id", createdDevice.ID.String()))
+// 	return response.JSON(c, int(http.StatusCreated), echo.Map{
+// 		"message": "device created successfully",
+// 		"device":  createdDevice,
+// 	})
+// }
+
+// func (h *DeviceHandler) GetDeviceByID(c echo.Context) error {
+// 	reqID := c.Param("id")
+// 	reqPath := utils.GetRequestUrlPath(c)
+
+// 	deviceID, err := uuid.Parse(reqID)
+// 	if err != nil {
+// 		return apperror.ErrBadRequest.WithMessage("invalid device ID format").WithDetails(echo.Map{
+// 			"error": err.Error(),
+// 		}).WithPath(reqPath).Wrap(err)
+// 	}
+
+// 	deviceExist, err := h.DeviceService.GetDeviceByID(c.Request().Context(), deviceID)
+// 	if err != nil {
+// 		return apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, fmt.Sprintf("failed to retrieve device with ID %s", reqID)).WithPath(reqPath)
+// 	}
+
+// 	h.log.Debug("device query executed", zap.String("device_id", deviceExist.ID.String()))
+// 	return response.JSON(c, int(http.StatusOK), echo.Map{
+// 		"device": deviceExist,
+// 	})
+// }
+
+// func (h *DeviceHandler) DeleteDeviceByID(c echo.Context) error {
+// 	reqID := c.Param("id")
+// 	reqPath := utils.GetRequestUrlPath(c)
+
+// 	deviceID, err := uuid.Parse(reqID)
+// 	if err != nil {
+// 		return apperror.ErrBadRequest.WithMessage("invalid device ID format").WithDetails(echo.Map{
+// 			"error": err.Error(),
+// 		}).WithPath(reqPath).Wrap(err)
+// 	}
+
+// 	if err := h.DeviceService.DeleteDevice(c.Request().Context(), deviceID); err != nil {
+// 		return apperror.ErrorHandler(err, apperror.ErrCodeInternal, fmt.Sprintf("failed to delete device with ID %s", reqID)).WithPath(reqPath)
+// 	}
+// 	h.log.Debug("device deleted", zap.String("device_id", deviceID.String()))
+// 	return response.JSON(c, int(http.StatusOK), echo.Map{
+// 		"device_id": deviceID,
+// 	})
+// }
+
+// func (h *DeviceHandler) UpdateDevice(c echo.Context) error {
+// 	var dto dto.UpdateDeviceDTO
+// 	reqID := c.Param("id")
+// 	reqPath := utils.GetRequestUrlPath(c)
+
+// 	deviceID, err := uuid.Parse(reqID)
+// 	if err != nil {
+// 		return apperror.ErrBadRequest.WithMessage("invalid device ID format").WithDetails(echo.Map{
+// 			"error": err.Error(),
+// 		}).WithPath(reqPath).Wrap(err)
+// 	}
+
+// 	// Bind body request and validate fields
+// 	if err := utils.BindAndValidate(c, &dto); err !=  -->nil {
+// 		return err
+// 	}
+
+// 	deviceUpdates := dto.ToDevice()
+// 	deviceUpdates.ID = deviceID
+
+// 	updatedDevice, err := h.DeviceService.UpdateDevice(c.Request().Context(), deviceUpdates)
+// 	if err != nil {
+// 		return apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate, fmt.Sprintf("failed to update device with ID %s", reqID)).WithPath(reqPath)
+// 	}
+
+// 	h.log.Debug("device updated", zap.String("device_id", deviceID.String()))
+// 	return response.JSON(c, int(http.StatusOK), echo.Map{
+// 		"device": updatedDevice,
+// 	})
+// }
+
+func (h *DeviceHandler) RegisterDevice(c echo.Context) error {
+	var dto dto.RegisterDeviceRequest
+
+	ctx := c.Request().Context()
+	path := utils.GetRequestUrlPath(c)
+
 	if err := utils.BindAndValidate(c, &dto); err != nil {
 		return err
 	}
 
-	createdDevice, err := h.DeviceService.CreateDevice(c.Request().Context(), dto.AsModel())
+	device, err := h.DeviceService.CreateDevice(ctx, dto.AsModel())
 	if err != nil {
-		return apperror.ErrorHandler(err, apperror.ErrCodeDBInsert, "failed to insert device").WithPath(reqPath).Wrap(err)
+		return apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate, "failed to register new device").WithPath(path)
 	}
 
-	h.log.Debug("device created", zap.String("device_id", createdDevice.ID.String()))
-	return response.JSON(c, int(http.StatusCreated), echo.Map{
-		"message": "device created successfully",
-		"device":  createdDevice,
-	})
-}
-
-func (h *DeviceHandler) GetDeviceByID(c echo.Context) error {
-	reqID := c.Param("id")
-	reqPath := utils.GetRequestUrlPath(c)
-
-	deviceID, err := uuid.Parse(reqID)
-	if err != nil {
-		return apperror.ErrBadRequest.WithMessage("invalid device ID format").WithDetails(echo.Map{
-			"error": err.Error(),
-		}).WithPath(reqPath).Wrap(err)
+	responsePayload := echo.Map{
+		"message": "device registered successfully",
 	}
-
-	deviceExist, err := h.DeviceService.GetDeviceByID(c.Request().Context(), deviceID)
-	if err != nil {
-		return apperror.ErrorHandler(err, apperror.ErrCodeDBQuery, fmt.Sprintf("failed to retrieve device with ID %s", reqID)).WithPath(reqPath)
+	if !config.InProd() {
+		responsePayload["device"] = device
 	}
+	return response.JSON(c, http.StatusCreated, responsePayload)
 
-	h.log.Debug("device query executed", zap.String("device_id", deviceExist.ID.String()))
-	return response.JSON(c, int(http.StatusOK), echo.Map{
-		"device": deviceExist,
-	})
-}
-
-func (h *DeviceHandler) DeleteDeviceByID(c echo.Context) error {
-	reqID := c.Param("id")
-	reqPath := utils.GetRequestUrlPath(c)
-
-	deviceID, err := uuid.Parse(reqID)
-	if err != nil {
-		return apperror.ErrBadRequest.WithMessage("invalid device ID format").WithDetails(echo.Map{
-			"error": err.Error(),
-		}).WithPath(reqPath).Wrap(err)
-	}
-
-	if err := h.DeviceService.DeleteDevice(c.Request().Context(), deviceID); err != nil {
-		return apperror.ErrorHandler(err, apperror.ErrCodeInternal, fmt.Sprintf("failed to delete device with ID %s", reqID)).WithPath(reqPath)
-	}
-	h.log.Debug("device deleted", zap.String("device_id", deviceID.String()))
-	return response.JSON(c, int(http.StatusOK), echo.Map{
-		"device_id": deviceID,
-	})
-}
-
-func (h *DeviceHandler) UpdateDevice(c echo.Context) error {
-	var dto dto.UpdateDeviceDTO
-	reqID := c.Param("id")
-	reqPath := utils.GetRequestUrlPath(c)
-
-	deviceID, err := uuid.Parse(reqID)
-	if err != nil {
-		return apperror.ErrBadRequest.WithMessage("invalid device ID format").WithDetails(echo.Map{
-			"error": err.Error(),
-		}).WithPath(reqPath).Wrap(err)
-	}
-
-	// Bind body request and validate fields
-	if err := utils.BindAndValidate(c, &dto); err != nil {
-		return err
-	}
-
-	deviceUpdates := dto.ToDevice()
-	deviceUpdates.ID = deviceID
-
-	updatedDevice, err := h.DeviceService.UpdateDevice(c.Request().Context(), deviceUpdates)
-	if err != nil {
-		return apperror.ErrorHandler(err, apperror.ErrCodeDBUpdate, fmt.Sprintf("failed to update device with ID %s", reqID)).WithPath(reqPath)
-	}
-
-	h.log.Debug("device updated", zap.String("device_id", deviceID.String()))
-	return response.JSON(c, int(http.StatusOK), echo.Map{
-		"device": updatedDevice,
-	})
 }
 
 // func (h *DeviceHandler) CreateNewDeviceInBulk(c echo.Context) error {

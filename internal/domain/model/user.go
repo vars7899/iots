@@ -52,8 +52,8 @@ func (u *User) HashPassword(raw string) error {
 	return nil
 }
 
-func (u *User) ComparePassword(inputHash string) error {
-	return bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(inputHash))
+func (u *User) ComparePassword(inputPassword string) error {
+	return bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(inputPassword))
 }
 
 func (u *User) HasPermission(code string) bool {

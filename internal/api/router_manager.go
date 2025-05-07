@@ -13,8 +13,9 @@ type RouteConfig struct {
 }
 
 type WsRouteConfig struct {
-	Path    string
-	Handler echo.HandlerFunc
+	Path       string
+	Handler    echo.HandlerFunc
+	Middleware []echo.MiddlewareFunc
 }
 
 type RouteHandler interface {
@@ -78,6 +79,9 @@ func (r *APIRouterManager) AddWebsocketRoute(wsRoute WsRouteConfig) {
 
 func (r *APIRouterManager) MountWebsockets() {
 	for _, route := range r.wsRoutes {
+		if len(route.Middleware) > 0 {
+			r.base.Use(route.Middleware...)
+		}
 		r.base.GET(route.Path, route.Handler)
 	}
 	r.logger.Info("websocket routes mounted", zap.Int("count", len(r.wsRoutes)))

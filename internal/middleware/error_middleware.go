@@ -9,7 +9,7 @@ import (
 )
 
 // ErrorHandler returns middleware that handles errors
-func ErrorHandler(logger *zap.Logger) echo.MiddlewareFunc {
+func NewErrorHandlerMiddleware(logger *zap.Logger) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// Set logger in context

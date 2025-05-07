@@ -13,6 +13,7 @@ var (
 	Suspended     Status = "suspended"
 	Error         Status = "error"
 	Activated     Status = "activated"
+	Reboot        Status = "reboot"
 )
 
 func IsValidStatus(inputStr string) bool {

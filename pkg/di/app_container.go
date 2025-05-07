@@ -7,6 +7,7 @@ import (
 	"github.com/vars7899/iots/config"
 	"github.com/vars7899/iots/internal/cache"
 	"github.com/vars7899/iots/internal/cache/redis"
+	"github.com/vars7899/iots/internal/middleware"
 	"github.com/vars7899/iots/internal/repository"
 	"github.com/vars7899/iots/internal/repository/postgres"
 	"github.com/vars7899/iots/internal/service"
@@ -21,6 +22,7 @@ import (
 )
 
 type AppContainer struct {
+	Api          *APIProvider
 	Repositories *RepositoryProvider
 	Services     *ServiceProvider
 	CoreServices *CoreServiceProvider
@@ -30,6 +32,10 @@ type AppContainer struct {
 	Config       *config.AppConfig
 	WaitGroup    *sync.WaitGroup
 	Ctx          context.Context
+}
+
+type APIProvider struct {
+	Middleware *middleware.MiddlewareRegistry
 }
 
 type RepositoryProvider struct {
@@ -43,7 +49,7 @@ type RepositoryProvider struct {
 
 type ServiceProvider struct {
 	SensorService             *service.SensorService
-	DeviceService             *service.DeviceService
+	DeviceService             service.DeviceService
 	UserService               service.UserService
 	TelemetryService          *service.TelemetryService
 	RoleService               service.RoleService
@@ -73,6 +79,12 @@ func NewAppContainer(ctx context.Context, wg *sync.WaitGroup, db *gorm.DB, cfg *
 		return nil, err
 	}
 
+	apiProvider, err := NewApiProvider(coreServiceProvider, logger)
+	if err != nil {
+		logger.Error("failed to initialize api provider", zap.Error(err))
+		return nil, err
+	}
+
 	serviceProvider, err := NewServiceProvider(repoProvider, coreServiceProvider, cfg, baseLogger)
 	if err != nil {
 		logger.Error("failed to initialize service provider", zap.Error(err))
@@ -80,6 +92,7 @@ func NewAppContainer(ctx context.Context, wg *sync.WaitGroup, db *gorm.DB, cfg *
 	}
 
 	a := &AppContainer{
+		Api:          apiProvider,
 		Repositories: repoProvider,
 		Services:     serviceProvider,
 		CoreServices: coreServiceProvider,
@@ -170,6 +183,26 @@ func NewCoreServiceProvider(db *gorm.DB, cfg *config.AppConfig, baseLogger *zap.
 		JTIStoreService:      jtiStoreService,
 		AuthTokenService:     authTokenService,
 		AccessControlService: accessControlService,
+	}, nil
+}
+
+func NewApiProvider(coreProvider *CoreServiceProvider, baseLogger *zap.Logger) (*APIProvider, error) {
+	logger := logger.Named(baseLogger, "APIProvider")
+	if coreProvider == nil {
+		logger.Error("APIProvider initialization failed: missing CoreServiceProvider")
+		return nil, apperror.ErrMissingDependency.WithMessage("missing core service provider")
+	}
+	if coreProvider.AuthTokenService == nil {
+		logger.Error("ServiceProvider initialization failed: missing CoreServiceProvider.AuthTokenService")
+		return nil, apperror.ErrMissingDependency.WithMessage("missing core service 'auth token service'")
+	}
+	if coreProvider.AccessControlService == nil {
+		logger.Error("ServiceProvider initialization failed: missing CoreServiceProvider.AccessControlService")
+		return nil, apperror.ErrMissingDependency.WithMessage("missing core service 'access control service'")
+	}
+
+	return &APIProvider{
+		Middleware: middleware.NewMiddlewareRegistry(coreProvider.AuthTokenService, coreProvider.AccessControlService, logger),
 	}, nil
 }
 
