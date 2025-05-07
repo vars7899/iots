@@ -16,7 +16,7 @@ type DeviceTokenService interface {
 	GetLeeway() time.Duration
 }
 
-type DeviceAuthManager interface {
+type DeviceAuthService interface {
 	IssueTokens(ctx context.Context, deviceID uuid.UUID) (*DeviceConnectionTokens, error)
 	RotateTokens(ctx context.Context, connectionToken string, refreshToken string) (*DeviceConnectionTokens, error)
 	ParseDeviceConnectionTokens(ctx context.Context, connectionToken string) (*DeviceConnectionClaims, error)
