@@ -12,6 +12,8 @@ import (
 
 // DeviceRepository defines all operations for device management
 type DeviceRepository interface {
+	Transaction(ctx context.Context, fn func(txRepo DeviceRepository) error) error // wrapper for transaction based query
+
 	Create(ctx context.Context, device *model.Device) (*model.Device, error)     // pre-register device ready for provisioning
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Device, error)            // retrieves device with unique identifier
 	GetByIDWithSensors(ctx context.Context, id uuid.UUID) (*model.Device, error) // retrieves device and eagerly load related sensor data with unique identifier
@@ -38,6 +40,8 @@ type DeviceRepository interface {
 
 	FindByMACAddr(ctx context.Context, addr string) (*model.Device, error) // find whether device exist with provided MAC address
 	ExistByMACAddr(ctx context.Context, addr string) (bool, error)         // check whether a device with mac address exist
+
+	MarkAsProvisioned(ctx context.Context, deviceID uuid.UUID) error // update the device status to the 'provisioned'
 
 	// // Specialized operations
 	// FindNearLocation(ctx context.Context, lat, lon float64, radiusKm float64, page, pageSize int) ([]device.Device, int64, error)

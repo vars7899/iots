@@ -9,7 +9,7 @@ import (
 
 type ProvisionDeviceRequest struct {
 	DeviceID      string `json:"device_id" validate:"required,uuid"`
-	ProvisionCode string `json:"provision_code" validate:"required,min=36,max=36"`
+	ProvisionCode string `json:"provision_code" validate:"required"`
 }
 
 func (dto *ProvisionDeviceRequest) Validate() error { return validation.Validate.Struct(dto) }

@@ -114,7 +114,6 @@ func (s *authService) RefreshAuthTokens(ctx context.Context, refreshToken string
 		s.logger.Error("invalid user claims", zap.Error(err))
 		return nil, nil, apperror.ErrUnauthorized.WithMessage("invalid refresh token").Wrap(err)
 	}
-	fmt.Println("ss", claims)
 
 	// Check if the refresh token is expired.
 	if time.Now().After(claims.ExpiresAt.Time) {

@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -39,7 +38,7 @@ func (h *WebsocketHandler) HandleConnection(c echo.Context) error {
 		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
 
-	deviceID, token, err := h.authenticateOrRegisterDevice(c)
+	deviceID, _, err := h.authenticateOrRegisterDevice(c)
 	if err != nil {
 		h.logger.Warn("Authentication failed", zap.Error(err))
 		return err
@@ -50,8 +49,6 @@ func (h *WebsocketHandler) HandleConnection(c echo.Context) error {
 		h.logger.Warn("Failed to upgrade websocket connectio", zap.String("device_id", deviceID.String()), zap.Error(err))
 		return nil
 	}
-
-	fmt.Println("ddd", deviceID, token)
 
 	// new session
 	session := NewDeviceSession(uuid.New(), conn, h.logger)

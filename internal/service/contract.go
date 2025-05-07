@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/vars7899/iots/internal/api/v1/dto"
 	"github.com/vars7899/iots/internal/domain/model"
+	"github.com/vars7899/iots/pkg/auth/deviceauth"
 	"github.com/vars7899/iots/pkg/auth/token"
 )
 
@@ -48,4 +49,5 @@ type AuthService interface {
 
 type DeviceService interface {
 	CreateDevice(ctx context.Context, device *model.Device) (*model.Device, error)
+	ProvisionDevice(ctx context.Context, idStr string, provisionCode string) (*deviceauth.DeviceConnectionTokens, error)
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/vars7899/iots/internal/ws"
 	"github.com/vars7899/iots/pkg/apperror"
 	"github.com/vars7899/iots/pkg/auth"
+	"github.com/vars7899/iots/pkg/auth/deviceauth"
 	"github.com/vars7899/iots/pkg/auth/token"
 	"github.com/vars7899/iots/pkg/logger"
 	"go.uber.org/zap"
@@ -62,6 +63,7 @@ type CoreServiceProvider struct {
 	AccessControlService auth.AccessControlService
 	JWTTokenService      token.TokenService
 	JTIStoreService      cache.JTIStore
+	DeviceAuthService    deviceauth.DeviceAuthService
 }
 
 func NewAppContainer(ctx context.Context, wg *sync.WaitGroup, db *gorm.DB, cfg *config.AppConfig, baseLogger *zap.Logger) (*AppContainer, error) {
@@ -174,15 +176,19 @@ func NewCoreServiceProvider(db *gorm.DB, cfg *config.AppConfig, baseLogger *zap.
 		return nil, apperror.ErrorHandler(err, apperror.ErrCodeInit, "failed to start access control service")
 	}
 
+	deviceConnectionTokenService := deviceauth.NewDeviceConnectionTokenService(cfg.Jwt, logger)
+
 	jwtTokenService := token.NewJwtTokenService(cfg.Jwt, logger)
 	jtiStoreService := redis.NewRedisJTIStore(cfg.Redis, logger)
 	authTokenService := auth.NewAuthTokenManger(jwtTokenService, jtiStoreService, logger)
+	deviceAuthService := deviceauth.NewDeviceAuthManager(deviceConnectionTokenService, *jtiStoreService, logger)
 
 	return &CoreServiceProvider{
 		JWTTokenService:      jwtTokenService,
 		JTIStoreService:      jtiStoreService,
 		AuthTokenService:     authTokenService,
 		AccessControlService: accessControlService,
+		DeviceAuthService:    deviceAuthService,
 	}, nil
 }
 
@@ -232,7 +238,7 @@ func NewServiceProvider(repoProvider *RepositoryProvider, coreProvider *CoreServ
 	resetPasswordTokenService := service.NewResetPasswordTokenService(repoProvider.ResetPasswordTokenRepository, repoProvider.UserRepository, logger)
 	userService := service.NewUserService(repoProvider.UserRepository, logger)
 	sensorService := service.NewSensorService(repoProvider.SensorRepository, logger)
-	deviceService := service.NewDeviceService(repoProvider.DeviceRepository, logger)
+	deviceService := service.NewDeviceService(repoProvider.DeviceRepository, coreProvider.DeviceAuthService, logger)
 	telemetryService := service.NewTelemetryService(repoProvider.TelemetryRepository, logger)
 	authService := service.NewAuthService(userService, roleService, coreProvider.AccessControlService, coreProvider.AuthTokenService, resetPasswordTokenService, config.GlobalConfig, logger)
 

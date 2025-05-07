@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/vars7899/iots/config"
 	"github.com/vars7899/iots/pkg/apperror"
+	"github.com/vars7899/iots/pkg/contextkey"
 	"github.com/vars7899/iots/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -88,6 +89,7 @@ func (s *deviceConnectionTokenService) generateConnectionToken(deviceID uuid.UUI
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Subject:   deviceID.String(),
 			ID:        jti,
+			Audience:  jwt.ClaimStrings{contextkey.AudienceDeviceService},
 		},
 	}
 
@@ -110,6 +112,7 @@ func (s *deviceConnectionTokenService) generateRefreshToken(deviceID uuid.UUID) 
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Subject:   deviceID.String(),
 			ID:        jti,
+			Audience:  jwt.ClaimStrings{contextkey.AudienceDeviceService},
 		},
 	}
 

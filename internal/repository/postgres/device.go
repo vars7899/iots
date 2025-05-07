@@ -31,6 +31,13 @@ func NewDeviceRepositoryPostgres(db *gorm.DB, baseLogger *zap.Logger) repository
 	}
 }
 
+func (r *DeviceRepositoryPostgres) Transaction(ctx context.Context, fn func(txRepo repository.DeviceRepository) error) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		txRepo := &DeviceRepositoryPostgres{db: tx, logger: r.logger, maxBatchSize: r.maxBatchSize}
+		return fn(txRepo)
+	})
+}
+
 func (r *DeviceRepositoryPostgres) Create(ctx context.Context, device *model.Device) (*model.Device, error) {
 	device.Status = model.DeviceStatusPendingProvision
 	device.OwnerID = nil
@@ -306,6 +313,19 @@ func (r *DeviceRepositoryPostgres) ExistByMACAddr(ctx context.Context, macAddr s
 	return count > 1, nil
 }
 
+func (r *DeviceRepositoryPostgres) MarkAsProvisioned(ctx context.Context, deviceID uuid.UUID) error {
+	tx := r.db.WithContext(ctx).Model(&model.Device{}).Where("id = ?", deviceID).Update("status", model.DeviceStatusProvisioned)
+	if tx.Error != nil {
+		r.logger.Debug("Failed to mark device as provisioned", zap.Error(tx.Error), zap.String("device_id", deviceID.String()))
+		return apperror.MapDBError(tx.Error, domain.EntityDevice)
+	}
+	if tx.RowsAffected == 0 {
+		r.logger.Debug("Failed to mark device as provisioned: no matching record found", zap.String("device_id", deviceID.String()))
+		return apperror.ErrNotFound.WithMessagef("mark device as provisioned operation failed: no matching %s found", domain.EntityDevice)
+	}
+	return nil
+}
+
 // func (r *DeviceRepositoryPostgres) GetDeviceCountTransaction(tx *gorm.DB) (int64, error) {
 // 	var count int64
 // 	if err := tx.Model(&model.Device{}).Count(&count).Error; err != nil {
@@ -465,7 +485,6 @@ func (r *DeviceRepositoryPostgres) ExistByMACAddr(ctx context.Context, macAddr s
 // 	inputIDs := make([]string, 0, len(deviceList))
 
 // 	for _, d := range deviceList {
-// 		fmt.Println(d.FirmwareVersion)
 // 		inputIDs = append(inputIDs, d.ID.String())
 // 	}
 

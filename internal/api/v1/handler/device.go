@@ -9,6 +9,8 @@ import (
 	"github.com/vars7899/iots/internal/middleware"
 	"github.com/vars7899/iots/internal/service"
 	"github.com/vars7899/iots/pkg/apperror"
+	"github.com/vars7899/iots/pkg/auth/deviceauth"
+	"github.com/vars7899/iots/pkg/contextkey"
 	"github.com/vars7899/iots/pkg/di"
 	"github.com/vars7899/iots/pkg/logger"
 	"github.com/vars7899/iots/pkg/response"
@@ -49,19 +51,40 @@ func (h *DeviceHandler) SetupRoutes(e *echo.Group) {
 	// e.PATCH("/:id/offline", h.MarkDeviceOffline)
 
 	// Provision flow
-	e.POST("/provision", h.middleware.PermissionRequired("device", "provision"))
+	e.POST("/provision", h.ProvisionDevice, h.middleware.PermissionRequired("device", "provision"))
 
 }
 
 func (h *DeviceHandler) ProvisionDevice(c echo.Context) error {
-	var dto *dto.ProvisionDeviceRequest
-
+	var dto dto.ProvisionDeviceRequest
 	ctx := c.Request().Context()
-	path := utils.GetRequestUrlPath(c)
 
-	if err := utils.BindAndValidate(c, dto); err != nil {
+	if err := utils.BindAndValidate(c, &dto); err != nil {
 		return err
 	}
+
+	connTokens, err := h.DeviceService.ProvisionDevice(ctx, dto.DeviceID, dto.ProvisionCode)
+	if err != nil {
+		return err
+	}
+	if connTokens == nil {
+		return apperror.ErrInternal.WithMessage("something went wrong while generating connection token")
+	}
+
+	bindDeviceConnectionHeaders(c, connTokens)
+
+	responsePayload := echo.Map{
+		"message": "device provisioned successfully",
+	}
+	if !config.InProd() {
+		responsePayload["device_session"] = connTokens
+	}
+	return response.JSON(c, http.StatusCreated, responsePayload)
+}
+
+func bindDeviceConnectionHeaders(c echo.Context, connTokens *deviceauth.DeviceConnectionTokens) {
+	c.Response().Header().Set(contextkey.HeaderDeviceConnectionToken, connTokens.ConnectionToken)
+	c.Response().Header().Set(contextkey.HeaderDeviceRefreshToken, connTokens.RefreshToken)
 }
 
 // func (h *DeviceHandler) CreateNewDevice(c echo.Context) error {
