@@ -14,6 +14,10 @@ type ProvisionDeviceRequest struct {
 
 func (dto *ProvisionDeviceRequest) Validate() error { return validation.Validate.Struct(dto) }
 
+type RefreshSessionTokenRequest struct {
+	RefreshToken string `json:"refresh_token" validate:"required"`
+}
+
 // type CreateNewDeviceDTO struct {
 // 	Name            string             `json:"name" validate:"required,max=255"`
 // 	Description     string             `json:"description,omitempty" validate:"max=255"`

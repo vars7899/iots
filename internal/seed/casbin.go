@@ -32,6 +32,7 @@ var permissions = []model.Permission{
 	{Code: "device:delete", Name: "Delete Devices"},
 	{Code: "device:restart", Name: "Restart Devices"},
 	{Code: "device:firmware:update", Name: "Update Device Firmware"},
+	{Code: "device:session_refresh", Name: "Refresh device session tokens"},
 
 	// Location or site management
 	{Code: "location:read", Name: "Read Locations"},
@@ -85,7 +86,7 @@ var rolePermissions = map[string][]string{
 	"admin": {
 		"user:read", "user:create", "user:update", "user:delete",
 		"sensor:read", "sensor:create", "sensor:update", "sensor:delete", "sensor:configure",
-		"device:register", "device:provision",
+		"device:register", "device:provision", "device:session_refresh",
 	},
 	"viewer": {
 		"user:read", "sensor:read", "sensor:create",

@@ -1,16 +1,17 @@
 package websocket
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	gorillaWs "github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/vars7899/iots/config"
+	"github.com/vars7899/iots/pkg/auth/deviceauth"
+	"github.com/vars7899/iots/pkg/contextkey"
 	"github.com/vars7899/iots/pkg/logger"
-	"github.com/vars7899/iots/pkg/utils"
 
 	"go.uber.org/zap"
 )
@@ -19,12 +20,14 @@ type WebsocketHandler struct {
 	manager         *SessionManager
 	config          *config.WebsocketConfig
 	credentialStore *CredentialStore
+	authService     deviceauth.DeviceAuthService
 	logger          *zap.Logger
 }
 
-func NewWebsocketHandler(sm *SessionManager, config *config.WebsocketConfig, baseLogger *zap.Logger) *WebsocketHandler {
+func NewWebsocketHandler(sm *SessionManager, auth deviceauth.DeviceAuthService, config *config.WebsocketConfig, baseLogger *zap.Logger) *WebsocketHandler {
 	return &WebsocketHandler{
 		manager:         sm,
+		authService:     auth,
 		config:          config,
 		credentialStore: NewCredentialStore(),
 		logger:          logger.Named(baseLogger, "WebsocketHandler"),
@@ -38,24 +41,50 @@ func (h *WebsocketHandler) HandleConnection(c echo.Context) error {
 		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
 
-	deviceID, _, err := h.authenticateOrRegisterDevice(c)
-	if err != nil {
-		h.logger.Warn("Authentication failed", zap.Error(err))
-		return err
+	req := c.Request()
+	ctx := req.Context()
+
+	// Step 1: Extract token from headers
+	connectionToken := req.Header.Get(contextkey.HeaderDeviceConnectionToken)
+	refreshToken := req.Header.Get(contextkey.HeaderDeviceRefreshToken)
+
+	if connectionToken == "" || refreshToken == "" {
+		return echo.NewHTTPError(http.StatusUnauthorized, "invalid token")
 	}
 
+	// Step 2: Validate the token
+	claims, newToken, err := h.authService.Authenticate(ctx, connectionToken, refreshToken)
+	if err != nil || claims == nil {
+		h.logger.Warn("Token validation failed", zap.Error(err))
+		return echo.NewHTTPError(http.StatusUnauthorized, "invalid token")
+	}
+
+	fmt.Println("[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]", claims)
+
+	deviceID, err := claims.DeviceID()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusUnauthorized, "malformed token")
+	}
+
+	// Step 3: Upgrade to WebSocket
 	conn, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
-		h.logger.Warn("Failed to upgrade websocket connectio", zap.String("device_id", deviceID.String()), zap.Error(err))
-		return nil
+		h.logger.Error("WebSocket upgrade failed", zap.Error(err))
+		return echo.NewHTTPError(http.StatusInternalServerError, "websocket upgrade failed")
 	}
 
-	// new session
-	session := NewDeviceSession(uuid.New(), conn, h.logger)
+	// Step 4: Create and register session
+	session := NewDeviceSession(deviceID, conn, h.logger)
 	h.manager.AddSession(session)
 
-	var wg sync.WaitGroup
+	// bind header if toke rotated
+	if newToken != nil {
+		c.Response().Header().Set(contextkey.HeaderDeviceConnectionToken, newToken.ConnectionToken)
+		c.Response().Header().Set(contextkey.HeaderDeviceRefreshToken, newToken.RefreshToken)
+	}
 
+	// Step 5: Start read/write pumps
+	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
@@ -65,8 +94,8 @@ func (h *WebsocketHandler) HandleConnection(c echo.Context) error {
 		defer wg.Done()
 		h.writePump(session)
 	}()
-
 	wg.Wait()
+
 	return nil
 }
 
@@ -124,38 +153,85 @@ func (h *WebsocketHandler) writePump(session *DeviceSession) {
 
 }
 
-func (h *WebsocketHandler) authenticateOrRegisterDevice(c echo.Context) (uuid.UUID, string, error) {
-	initToken := c.Request().Header.Get("X-Initial-Token")
-	deviceIDStr := c.Request().Header.Get("X-Device-ID")
+// func (h *WebsocketHandler) authenticateOrRegisterDevice(c echo.Context) (uuid.UUID, *deviceauth.DeviceConnectionTokens, error) {
+// 	req := c.Request()
+// 	ctx := req.Context()
 
-	if initToken == "" || deviceIDStr == "" {
-		return uuid.Nil, "", echo.NewHTTPError(http.StatusBadRequest, "Missing initial token or device ID")
-	}
+// 	connectionToken := req.Header.Get(contextkey.HeaderDeviceConnectionToken)
+// 	refreshToken := req.Header.Get(contextkey.HeaderDeviceRefreshToken)
 
-	deviceID, err := uuid.Parse(deviceIDStr)
-	if err != nil {
-		return uuid.Nil, "", echo.NewHTTPError(http.StatusBadRequest, "Invalid UUID format for device ID")
-	}
+// 	claims, genTokens, err := deviceauth.DeviceAuthService.Authenticate(ctx, connectionToken, refreshToken)
+// 	if err != nil {
+// 		return uuid.Nil, nil, err
+// 	}
 
-	// // --- If already registered, return existing token ---
-	// if token, ok := h.credentialStore.GetPermanentToken(deviceID); ok {
-	// 	return deviceID, *token, nil
-	// }
+// 	initToken := c.Request().Header.Get("X-Initial-Token")
+// 	deviceIDStr := c.Request().Header.Get("X-Device-ID")
 
-	// --- Validate initial token ---
-	if !h.credentialStore.ValidateInitialToken(deviceID, initToken) {
-		return uuid.Nil, "", echo.NewHTTPError(http.StatusUnauthorized, "Invalid initial token or device ID")
-	}
+// 	if initToken == "" || deviceIDStr == "" {
+// 		return uuid.Nil, "", echo.NewHTTPError(http.StatusBadRequest, "Missing initial token or device ID")
+// 	}
 
-	// --- Generate permanent token ---
-	permanentToken, err := utils.GenerateSecureToken(32)
-	if err != nil {
-		return uuid.Nil, "", echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate token")
-	}
+// 	deviceID, err := uuid.Parse(deviceIDStr)
+// 	if err != nil {
+// 		return uuid.Nil, "", echo.NewHTTPError(http.StatusBadRequest, "Invalid UUID format for device ID")
+// 	}
 
-	// --- Store and delete initial ---
-	h.credentialStore.StoreAsPermanent(deviceID, permanentToken)
-	h.credentialStore.DeleteInitialToken(deviceID)
+// 	// // --- If already registered, return existing token ---
+// 	// if token, ok := h.credentialStore.GetPermanentToken(deviceID); ok {
+// 	// 	return deviceID, *token, nil
+// 	// }
 
-	return deviceID, permanentToken, nil
-}
+// 	// --- Validate initial token ---
+// 	if !h.credentialStore.ValidateInitialToken(deviceID, initToken) {
+// 		return uuid.Nil, "", echo.NewHTTPError(http.StatusUnauthorized, "Invalid initial token or device ID")
+// 	}
+
+// 	// --- Generate permanent token ---
+// 	permanentToken, err := utils.GenerateSecureToken(32)
+// 	if err != nil {
+// 		return uuid.Nil, "", echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate token")
+// 	}
+
+// 	// --- Store and delete initial ---
+// 	h.credentialStore.StoreAsPermanent(deviceID, permanentToken)
+// 	h.credentialStore.DeleteInitialToken(deviceID)
+
+// 	return deviceID, permanentToken, nil
+// }
+
+// func (h *WebsocketHandler) authenticateOrRegisterDevice(c echo.Context) (uuid.UUID, *deviceauth.DeviceConnectionTokens, error) {
+// 	initToken := c.Request().Header.Get("X-Initial-Token")
+// 	deviceIDStr := c.Request().Header.Get("X-Device-ID")
+
+// 	if initToken == "" || deviceIDStr == "" {
+// 		return uuid.Nil, "", echo.NewHTTPError(http.StatusBadRequest, "Missing initial token or device ID")
+// 	}
+
+// 	deviceID, err := uuid.Parse(deviceIDStr)
+// 	if err != nil {
+// 		return uuid.Nil, "", echo.NewHTTPError(http.StatusBadRequest, "Invalid UUID format for device ID")
+// 	}
+
+// 	// // --- If already registered, return existing token ---
+// 	// if token, ok := h.credentialStore.GetPermanentToken(deviceID); ok {
+// 	// 	return deviceID, *token, nil
+// 	// }
+
+// 	// --- Validate initial token ---
+// 	if !h.credentialStore.ValidateInitialToken(deviceID, initToken) {
+// 		return uuid.Nil, "", echo.NewHTTPError(http.StatusUnauthorized, "Invalid initial token or device ID")
+// 	}
+
+// 	// --- Generate permanent token ---
+// 	permanentToken, err := utils.GenerateSecureToken(32)
+// 	if err != nil {
+// 		return uuid.Nil, "", echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate token")
+// 	}
+
+// 	// --- Store and delete initial ---
+// 	h.credentialStore.StoreAsPermanent(deviceID, permanentToken)
+// 	h.credentialStore.DeleteInitialToken(deviceID)
+
+// 	return deviceID, permanentToken, nil
+// }

@@ -52,6 +52,8 @@ func (h *DeviceHandler) SetupRoutes(e *echo.Group) {
 
 	// Provision flow
 	e.POST("/provision", h.ProvisionDevice, h.middleware.PermissionRequired("device", "provision"))
+	// e.GET("/connect", h.UpgradeToDeviceSession, h.middleware.PermissionRequired("device", "session"))
+	e.POST("/session/refresh", h.RefreshSessionToken, h.middleware.PermissionRequired("device", "session_refresh"))
 
 }
 
@@ -80,6 +82,68 @@ func (h *DeviceHandler) ProvisionDevice(c echo.Context) error {
 		responsePayload["device_session"] = connTokens
 	}
 	return response.JSON(c, http.StatusCreated, responsePayload)
+}
+
+// Device                        Server (Echo)
+//   |                                	|
+//   |--- HTTP GET /connect ----------->|   ← WebSocket upgrade endpoint
+//   |   Headers:                     	|
+//   |     Connection-Token          	|
+//   |     Refresh-Token (optional)  	|
+//   |                                	|
+//   |<--- Validate Tokens -------------|
+//   |     - if valid:                	|
+//   |         upgrade to WebSocket   	|
+//   |     - if expired:              	|
+//   |         try refresh           	|
+//   |         - if refresh valid:   	|
+//   |             upgrade to WS     	|
+//   |         - else: reject        	|
+//   |                                	|
+//   |--- WebSocket established ------->|
+//   |                                	|
+//   |    (start two-way comm)       	|
+
+// func (h *DeviceHandler) UpgradeToDeviceSession(c echo.Context) error {
+// 	req := c.Request()
+// 	ctx := req.Context()
+
+// 	connectionToken := req.Header.Get(contextkey.HeaderDeviceConnectionToken)
+// 	refreshToken := req.Header.Get(contextkey.HeaderDeviceRefreshToken)
+
+// 	if connectionToken == "" {
+// 		return apperror.ErrInvalidToken.WithMessage("missing session connection tokens")
+// 	}
+
+// 	return nil
+// }
+
+func (h *DeviceHandler) RefreshSessionToken(c echo.Context) error {
+	req := c.Request()
+	ctx := req.Context()
+
+	connectionTokenStr := req.Header.Get(contextkey.HeaderDeviceConnectionToken)
+	refreshTokenStr := req.Header.Get(contextkey.HeaderDeviceRefreshToken)
+
+	if connectionTokenStr == "" || refreshTokenStr == "" {
+		return apperror.ErrInvalidToken.WithMessage("invalid or missing device session token")
+	}
+
+	connTokens, err := h.DeviceService.RefreshDeviceTokens(ctx, connectionTokenStr, refreshTokenStr)
+	if err != nil {
+		return apperror.ErrorHandler(err, apperror.ErrCodeInternal)
+	}
+
+	bindDeviceConnectionHeaders(c, connTokens)
+
+	responsePayload := echo.Map{
+		"message": "device session token refreshed",
+	}
+	if !config.InProd() {
+		responsePayload["device_session"] = connTokens
+	}
+
+	return response.JSON(c, http.StatusOK, responsePayload)
 }
 
 func bindDeviceConnectionHeaders(c echo.Context, connTokens *deviceauth.DeviceConnectionTokens) {

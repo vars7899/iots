@@ -104,6 +104,10 @@ func (s *deviceService) ProvisionDevice(ctx context.Context, idStr string, provi
 	return connectionTokens, nil
 }
 
+func (s *deviceService) RefreshDeviceTokens(ctx context.Context, connectionTokenStr string, refreshTokenStr string) (*deviceauth.DeviceConnectionTokens, error) {
+	return s.deviceAuthService.RotateTokens(ctx, connectionTokenStr, refreshTokenStr)
+}
+
 func (s *deviceService) GetDeviceByID(ctx context.Context, deviceID uuid.UUID) (*model.Device, error) {
 	deviceExist, err := s.deviceRepo.GetByID(ctx, deviceID)
 	if err != nil {

@@ -50,4 +50,5 @@ type AuthService interface {
 type DeviceService interface {
 	CreateDevice(ctx context.Context, device *model.Device) (*model.Device, error)
 	ProvisionDevice(ctx context.Context, idStr string, provisionCode string) (*deviceauth.DeviceConnectionTokens, error)
+	RefreshDeviceTokens(ctx context.Context, connectionTokenStr string, refreshTokenStr string) (*deviceauth.DeviceConnectionTokens, error)
 }

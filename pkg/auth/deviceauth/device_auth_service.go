@@ -2,6 +2,7 @@ package deviceauth
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,6 +24,32 @@ func NewDeviceAuthManager(tokenSrv DeviceTokenService, store redis.JTIStore, bas
 		jtiStoreService:    store,
 		logger:             logger.Named(baseLogger, "DeviceAuthService"),
 	}
+}
+
+func (s *deviceAuthService) Authenticate(ctx context.Context, connTokenStr string, refreshTokenStr string) (*DeviceConnectionClaims, *DeviceConnectionTokens, error) {
+	claims, err := s.ValidateDeviceConnectionTokens(ctx, connTokenStr)
+
+	// If the error is due to expiration (and not a malformed or tampered token)
+	if err != nil {
+		if errors.Is(err, apperror.ErrExpiredToken) {
+			// Proceed only if refresh token is also valid
+			genTokens, err := s.RotateTokens(ctx, connTokenStr, refreshTokenStr)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			newClaims, err := s.ValidateDeviceConnectionTokens(ctx, genTokens.ConnectionToken)
+			if err != nil {
+				return nil, nil, err
+			}
+			return newClaims, genTokens, nil
+		}
+
+		// If token was malformed or otherwise invalid — reject it
+		return nil, nil, err
+	}
+
+	return claims, nil, nil
 }
 
 func (s *deviceAuthService) IssueTokens(ctx context.Context, deviceID uuid.UUID) (*DeviceConnectionTokens, error) {
