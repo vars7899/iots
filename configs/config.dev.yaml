@@ -30,7 +30,8 @@ frontend:
   base_url: ${FRONTEND_BASE_URL}
 websocket:
   read_deadline: 4096 # 4kb
-  pong_timeout: 15m
+  ping_timeout: 1m
+  pong_timeout: 2m
 nats:
   base_url: ${NATS_BASE_URL}
 

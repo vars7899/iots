@@ -21,6 +21,7 @@ type AppConfig struct {
 	Auth      *AuthConfig      `mapstructure:"auth"`
 	Frontend  *FrontendConfig  `mapstructure:"frontend"`
 	Websocket *WebsocketConfig `mapstructure:"websocket"`
+	Nats      *NatsConfig      `mapstructure:"nats"`
 }
 
 type ServerConfig struct {
@@ -49,6 +50,7 @@ type JwtConfig struct {
 }
 
 type WebsocketConfig struct {
+	PingTimeout  time.Duration `mapstructure:"ping_timeout"`
 	PongTimeout  time.Duration `mapstructure:"pong_timeout"`
 	ReadDeadline int64         `mapstructure:"read_deadline"`
 }

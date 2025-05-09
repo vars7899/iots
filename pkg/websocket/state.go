@@ -116,7 +116,7 @@ func (m *DeviceStateManager) RegisterMetadata(ctx context.Context, metadata *Dev
 		m.logger.Info("Device registered", zap.String("device_id", metadata.DeviceID.String()))
 
 		// Publish a "device_registered" event
-		m.publishAsync(context.Background(), formatTopic(TopicDeviceRegistered, metadata.DeviceID.String()), m.records[metadata.DeviceID].Metadata)
+		// m.publishAsync(context.Background(), formatTopic(TopicDeviceRegistered, metadata.DeviceID.String()), m.records[metadata.DeviceID].Metadata)
 
 		return nil
 	}
@@ -141,7 +141,7 @@ func (m *DeviceStateManager) RegisterMetadata(ctx context.Context, metadata *Dev
 		m.logger.Info("Device metadata updated and state preserved", zap.String("device_id", metadata.DeviceID.String()))
 	}
 
-	m.publishAsync(context.Background(), formatTopic(TopicDeviceMetadata, metadata.DeviceID.String()), existingRecord.Metadata)
+	// m.publishAsync(context.Background(), formatTopic(TopicDeviceMetadata, metadata.DeviceID.String()), existingRecord.Metadata)
 
 	return nil
 }
@@ -214,7 +214,7 @@ func (m *DeviceStateManager) UpdateState(ctx context.Context, deviceID uuid.UUID
 	m.logger.Info("Device state updated", zap.String("device_id", deviceID.String()))
 
 	if stateChanged {
-		m.publishAsync(ctx, formatTopic(TopicDeviceState, deviceID.String()), device.State)
+		// m.publishAsync(ctx, formatTopic(TopicDeviceState, deviceID.String()), device.State)
 	}
 	return nil
 }

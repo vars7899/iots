@@ -108,15 +108,15 @@ type AccessGroup struct {
 }
 
 // DeviceEvent represents significant events in a device's lifecycle
-type DeviceEvent struct {
-	ID        uuid.UUID `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	DeviceID  uuid.UUID `json:"device_id" gorm:"type:uuid"`
-	EventType string    `json:"event_type"` // connection, disconnection, error, update, etc.
-	Severity  string    `json:"severity"`   // info, warning, error, critical
-	Message   string    `json:"message"`
-	Metadata  JSON      `json:"metadata" gorm:"type:jsonb"`
-	CreatedAt time.Time `json:"created_at"`
-}
+// type DeviceEvent struct {
+// 	ID        uuid.UUID `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+// 	DeviceID  uuid.UUID `json:"device_id" gorm:"type:uuid"`
+// 	EventType string    `json:"event_type"` // connection, disconnection, error, update, etc.
+// 	Severity  string    `json:"severity"`   // info, warning, error, critical
+// 	Message   string    `json:"message"`
+// 	Metadata  JSON      `json:"metadata" gorm:"type:jsonb"`
+// 	CreatedAt time.Time `json:"created_at"`
+// }
 
 type JSON map[string]interface{}
 

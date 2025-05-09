@@ -18,6 +18,7 @@ import (
 	"github.com/vars7899/iots/pkg/auth/deviceauth"
 	"github.com/vars7899/iots/pkg/auth/token"
 	"github.com/vars7899/iots/pkg/logger"
+	"github.com/vars7899/iots/pkg/pubsub"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -59,6 +60,7 @@ type ServiceProvider struct {
 }
 
 type CoreServiceProvider struct {
+	NatsPublisher        pubsub.PubSubPublisher // cross service communication
 	AuthTokenService     auth.AuthTokenService
 	AccessControlService auth.AccessControlService
 	JWTTokenService      token.TokenService
@@ -153,6 +155,10 @@ func NewRepositoryProvider(db *gorm.DB, baseLogger *zap.Logger) (*RepositoryProv
 func NewCoreServiceProvider(db *gorm.DB, cfg *config.AppConfig, baseLogger *zap.Logger) (*CoreServiceProvider, error) {
 	logger := logger.Named(baseLogger, "CoreServiceProvider")
 
+	if cfg.Nats.BaseUrl == "" {
+		logger.Error("Initialization failed: missing nats base url")
+		return nil, apperror.ErrMissingConfig.WithMessage("initialization failed: missing nats base url").AsInternal()
+	}
 	if db == nil {
 		logger.Error("CoreServiceProvider initialization failed: missing db")
 		return nil, apperror.ErrDBMissing.WithMessage("initialization failed: missing db")
@@ -176,6 +182,13 @@ func NewCoreServiceProvider(db *gorm.DB, cfg *config.AppConfig, baseLogger *zap.
 		return nil, apperror.ErrorHandler(err, apperror.ErrCodeInit, "failed to start access control service")
 	}
 
+	// Nats pubsub publisher
+	natsPubsub, err := pubsub.NewNatsPubSub(cfg.Nats.BaseUrl, logger)
+	if err != nil {
+		logger.Error("Nats publisher initialization failed", zap.Error(err))
+		return nil, apperror.ErrorHandler(err, apperror.ErrCodeInit)
+	}
+
 	deviceConnectionTokenService := deviceauth.NewDeviceConnectionTokenService(cfg.Jwt, logger)
 
 	jwtTokenService := token.NewJwtTokenService(cfg.Jwt, logger)
@@ -184,6 +197,7 @@ func NewCoreServiceProvider(db *gorm.DB, cfg *config.AppConfig, baseLogger *zap.
 	deviceAuthService := deviceauth.NewDeviceAuthManager(deviceConnectionTokenService, *jtiStoreService, logger)
 
 	return &CoreServiceProvider{
+		NatsPublisher:        natsPubsub,
 		JWTTokenService:      jwtTokenService,
 		JTIStoreService:      jtiStoreService,
 		AuthTokenService:     authTokenService,

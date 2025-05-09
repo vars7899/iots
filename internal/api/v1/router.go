@@ -57,7 +57,7 @@ func RegisterRoutes(e *echo.Echo, container *di.AppContainer) {
 
 	manager.AddWebsocketRoute(api.WsRouteConfig{
 		Path:    "/device/session/connect",
-		Handler: websocket.NewWebsocketHandler(wsManager, container.CoreServices.DeviceAuthService, container.Config.Websocket, logger).HandleConnection,
+		Handler: websocket.NewWebsocketHandler(wsManager, container.CoreServices.NatsPublisher, container.CoreServices.DeviceAuthService, container.Config.Websocket, logger).HandleConnection,
 		Middleware: []echo.MiddlewareFunc{
 			middleware.NewJWTMiddleware(container.CoreServices.AuthTokenService, logger),
 			middleware.NewJTIMiddleware(container.CoreServices.AuthTokenService, logger),

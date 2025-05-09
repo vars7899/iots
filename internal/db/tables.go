@@ -15,7 +15,7 @@ var DB_Tables = []interface{}{
 	&model.Sensor{},
 	&model.Telemetry{},
 	&model.AccessGroup{},
-	&model.DeviceEvent{},
+	// &model.DeviceEvent{},
 	&domain.GeoLocation{},
 	&model.ResetPasswordToken{},
 }
