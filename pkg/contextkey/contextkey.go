@@ -18,3 +18,12 @@ const (
 	ActionCreate Key = "create"
 	ActionDelete Key = "delete"
 )
+
+const (
+	HeaderDeviceConnectionToken = "X-Device-Connection-Token"
+	HeaderDeviceRefreshToken    = "X-Device-Refresh-Token"
+)
+
+const (
+	AudienceDeviceService = "device-service"
+)

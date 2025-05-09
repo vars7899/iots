@@ -5,34 +5,47 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/vars7899/iots/internal/domain"
 	"github.com/vars7899/iots/internal/domain/model"
 	"github.com/vars7899/iots/pkg/pagination"
 )
 
 // DeviceRepository defines all operations for device management
 type DeviceRepository interface {
-	Create(ctx context.Context, device *model.Device) (*model.Device, error)
-	GetByID(ctx context.Context, id uuid.UUID) (*model.Device, error)
-	Update(ctx context.Context, device *model.Device) (*model.Device, error)
-	SoftDelete(ctx context.Context, id uuid.UUID) error
+	Transaction(ctx context.Context, fn func(txRepo DeviceRepository) error) error // wrapper for transaction based query
 
-	// Query operations
-	FindAll(ctx context.Context, paginationOpt *pagination.Pagination) ([]*model.Device, int64, error)
-	// FindByOwnerID(ctx context.Context, ownerID uuid.UUID, paginationOpt *pagination.Pagination) ([]*model.Device, int64, error)
-	// FindByType(ctx context.Context, deviceType string, paginationOpt pagination.Pagination) ([]device.Device, int64, error)
-	// FindByStatus(ctx context.Context, status string, paginationOpt pagination.Pagination) ([]device.Device, int64, error)
-	// FindByTags(ctx context.Context, tags []string, paginationOpt pagination.Pagination) ([]device.Device, int64, error)
-	// FindByCapabilities(ctx context.Context, capabilities []string, paginationOpt pagination.Pagination) ([]device.Device, int64, error)
-	// Search(ctx context.Context, query string, paginationOpt pagination.Pagination) ([]device.Device, int64, error)
+	Create(ctx context.Context, device *model.Device) (*model.Device, error)     // pre-register device ready for provisioning
+	GetByID(ctx context.Context, id uuid.UUID) (*model.Device, error)            // retrieves device with unique identifier
+	GetByIDWithSensors(ctx context.Context, id uuid.UUID) (*model.Device, error) // retrieves device and eagerly load related sensor data with unique identifier
+	Update(ctx context.Context, device *model.Device) (*model.Device, error)     // update existing device record
+	HardDelete(ctx context.Context, deviceID uuid.UUID) error                    // permanently delete device record
+	Delete(ctx context.Context, deviceID uuid.UUID) error                        // soft delete device, deletedAt field added to record
+	Recover(ctx context.Context, deviceID uuid.UUID) error                       // recover soft delete device from db, remove deletedAt field from record
+
+	List(ctx context.Context, filters *domain.DeviceFilter, opts ...*pagination.Pagination) ([]*model.Device, int64, error) // list devices filtered & paginated
+
+	GetByOwnerID(ctx context.Context, ownerID uuid.UUID, opts *pagination.Pagination) ([]*model.Device, int64, error)       // retrieve devices with given ownerID
+	GetByStatus(ctx context.Context, status model.DeviceStatus, opt *pagination.Pagination) ([]*model.Device, int64, error) // retrieve devices with given status
+	GetDeleted(ctx context.Context, opt *pagination.Pagination) ([]*model.Device, int64, error)                             // retrieve soft-deleted devices
+
+	SearchByName(ctx context.Context, searchStr string, opt *pagination.Pagination) ([]*model.Device, int64, error)                        // search device by name (case insensitive)
+	SearchByTags(ctx context.Context, tags []string, opt *pagination.Pagination) ([]*model.Device, int64, error)                           // search device by tag list
+	SearchByCapabilities(ctx context.Context, capabilities []string, paginationOpt *pagination.Pagination) ([]*model.Device, int64, error) // search device by capabilities
+
+	AssignOwner(ctx context.Context, deviceID uuid.UUID, ownerID uuid.UUID) error             // assign owner to a device
+	UpdateStatus(ctx context.Context, deviceID uuid.UUID, newStatus model.DeviceStatus) error // update device status
+	UpdateLastConnected(ctx context.Context, deviceID uuid.UUID, timestamp time.Time) error   // update device last connected timestamp
+
+	CountByStatus(ctx context.Context) (map[model.DeviceStatus]int64, error) // retrieve the count the number of all status
+
+	FindByMACAddr(ctx context.Context, addr string) (*model.Device, error) // find whether device exist with provided MAC address
+	ExistByMACAddr(ctx context.Context, addr string) (bool, error)         // check whether a device with mac address exist
+
+	MarkAsProvisioned(ctx context.Context, deviceID uuid.UUID) error // update the device status to the 'provisioned'
 
 	// // Specialized operations
 	// FindNearLocation(ctx context.Context, lat, lon float64, radiusKm float64, page, pageSize int) ([]device.Device, int64, error)
 	// FindByLastConnectedRange(ctx context.Context, start, end time.Time, page, pageSize int) ([]device.Device, int64, error)
-
-	// Status management
-	// UpdateStatus(ctx context.Context, deviceID uuid.UUID, status domain.Status) error
-	// MarkOnline(ctx context.Context, deviceID uuid.UUID) (*model.Device, error)
-	// MarkOffline(ctx context.Context, deviceID uuid.UUID) (*model.Device, error)
 
 	// // Bulk operations
 	// BulkCreate(ctx context.Context, devices []*model.Device) ([]*model.Device, error)

@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/vars7899/iots/internal/api/v1/dto"
 	"github.com/vars7899/iots/internal/domain/model"
+	"github.com/vars7899/iots/pkg/auth/deviceauth"
 	"github.com/vars7899/iots/pkg/auth/token"
 )
 
@@ -44,4 +45,10 @@ type AuthService interface {
 	LogoutUser(ctx context.Context, userID *uuid.UUID, claims *token.AccessTokenClaims, refreshTokenStr string) error
 	RequestPasswordReset(ctx context.Context, email string) (*model.ResetPasswordToken, *string, error)
 	ResetPassword(ctx context.Context, resetToken, newRawPassword string) error
+}
+
+type DeviceService interface {
+	CreateDevice(ctx context.Context, device *model.Device) (*model.Device, error)
+	ProvisionDevice(ctx context.Context, idStr string, provisionCode string) (*deviceauth.DeviceConnectionTokens, error)
+	RefreshDeviceTokens(ctx context.Context, connectionTokenStr string, refreshTokenStr string) (*deviceauth.DeviceConnectionTokens, error)
 }

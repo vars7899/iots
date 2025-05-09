@@ -14,6 +14,9 @@ jwt:
   refresh_secret: ${JWT_REFRESH_SECRET}
   access_token_ttl: 1h
   refresh_token_ttl: 4h # update redis ttl accordingly always add buffer with this as base
+  device_connection_token_ttl: 30m
+  device_refresh_token_ttl: 4h
+  leeway: 15s
 redis:
   address: localhost:6379
   password: ${REDIS_PASSWORD}
@@ -25,6 +28,11 @@ auth:
   request_reset_password_token_ttl: 30m
 frontend:
   base_url: ${FRONTEND_BASE_URL}
-
+websocket:
+  read_deadline: 4096 # 4kb
+  ping_timeout: 1m
+  pong_timeout: 2m
+nats:
+  base_url: ${NATS_BASE_URL}
 
 

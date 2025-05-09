@@ -19,40 +19,64 @@ import (
 
 type DeviceRepositoryPostgres struct {
 	db           *gorm.DB
-	log          *zap.Logger
-	queryTimeout time.Duration
+	logger       *zap.Logger
 	maxBatchSize int
 }
 
 func NewDeviceRepositoryPostgres(db *gorm.DB, baseLogger *zap.Logger) repository.DeviceRepository {
-	log := logger.Named(baseLogger, "DeviceRepositoryPostgres")
-	return &DeviceRepositoryPostgres{db: db, log: log, queryTimeout: time.Millisecond * 10000, maxBatchSize: 100} // TODO: tune the maxBatchSize for postgres (100 - 500)
+	return &DeviceRepositoryPostgres{
+		db:           db,
+		logger:       logger.Named(baseLogger, "DeviceRepositoryPostgres"),
+		maxBatchSize: 100,
+	}
 }
 
-func (r *DeviceRepositoryPostgres) Create(ctx context.Context, deviceData *model.Device) (*model.Device, error) {
-	if err := r.db.WithContext(ctx).Model(&model.Device{}).Create(&deviceData).Error; err != nil {
+func (r *DeviceRepositoryPostgres) Transaction(ctx context.Context, fn func(txRepo repository.DeviceRepository) error) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		txRepo := &DeviceRepositoryPostgres{db: tx, logger: r.logger, maxBatchSize: r.maxBatchSize}
+		return fn(txRepo)
+	})
+}
+
+func (r *DeviceRepositoryPostgres) Create(ctx context.Context, device *model.Device) (*model.Device, error) {
+	device.Status = model.DeviceStatusPendingProvision
+	device.OwnerID = nil
+
+	if err := r.db.WithContext(ctx).Model(&model.Device{}).Create(&device).Error; err != nil {
+		r.logger.Debug("Failed to create new device", zap.Error(err))
 		return nil, apperror.MapDBError(err, domain.EntityDevice)
 	}
-	return deviceData, nil
+	return device, nil
 }
 
 func (r *DeviceRepositoryPostgres) GetByID(ctx context.Context, deviceID uuid.UUID) (*model.Device, error) {
-	var deviceData model.Device
-	if err := r.db.WithContext(ctx).Where("id = ?", deviceID).First(&deviceData).Error; err != nil {
+	var device model.Device
+	if err := r.db.WithContext(ctx).Where("id = ?", deviceID).First(&device).Error; err != nil {
+		r.logger.Debug("Failed to get device", zap.String("device_id", deviceID.String()), zap.Error(err))
 		return nil, apperror.MapDBError(err, domain.EntityDevice)
 	}
-	return &deviceData, nil
+	return &device, nil
 }
 
-func (r *DeviceRepositoryPostgres) Update(ctx context.Context, deviceData *model.Device) (*model.Device, error) {
-	var updatedDevice model.Device
-	tx := r.db.WithContext(ctx).Model(&model.Device{}).Clauses(clause.Returning{}).Where("id = ?", deviceData.ID).Updates(deviceData).Scan(&updatedDevice)
+func (r *DeviceRepositoryPostgres) GetByIDWithSensors(ctx context.Context, deviceID uuid.UUID) (*model.Device, error) {
+	var device model.Device
+	if err := r.db.WithContext(ctx).Preload("Sensors").Where("id = ?", deviceID).First(&device).Error; err != nil {
+		r.logger.Debug("Failed to get device with sensors", zap.String("device_id", deviceID.String()), zap.Error(err))
+		return nil, apperror.MapDBError(err, domain.EntityDevice)
+	}
+	return &device, nil
+}
 
+func (r *DeviceRepositoryPostgres) Update(ctx context.Context, device *model.Device) (*model.Device, error) {
+	var updatedDevice model.Device
+	tx := r.db.WithContext(ctx).Model(&model.Device{}).Clauses(clause.Returning{}).Where("id = ?", device.ID).Updates(device).Scan(&updatedDevice)
 	if tx.Error != nil {
-		return nil, apperror.MapDBError(tx.Error, domain.EntitySensor)
+		r.logger.Debug("Failed to update device", zap.String("device_id", device.ID.String()), zap.Error(tx.Error))
+		return nil, apperror.MapDBError(tx.Error, domain.EntityDevice)
 	}
 	if tx.RowsAffected == 0 {
-		return nil, apperror.ErrNotFound.WithMessagef("error encountered while performing %s update operation, please retry", domain.EntityDevice)
+		r.logger.Debug("Failed to update device: no matching record found", zap.String("device_id", device.ID.String()))
+		return nil, apperror.ErrNotFound.WithMessagef("update operation failed: no matching %s found", domain.EntityDevice)
 	}
 	return &updatedDevice, nil
 }
@@ -60,77 +84,247 @@ func (r *DeviceRepositoryPostgres) Update(ctx context.Context, deviceData *model
 func (r *DeviceRepositoryPostgres) HardDelete(ctx context.Context, deviceID uuid.UUID) error {
 	tx := r.db.WithContext(ctx).Unscoped().Where("id = ?", deviceID).Delete(&model.Device{})
 	if tx.Error != nil {
+		r.logger.Debug("Failed to hard delete", zap.String("device_id", deviceID.String()), zap.Error(tx.Error))
 		return apperror.MapDBError(tx.Error, domain.EntityDevice)
 	}
 	if tx.RowsAffected == 0 {
-		return apperror.ErrNotFound.WithMessagef("cannot hard delete %s: no matching record found", domain.EntityDevice)
+		r.logger.Debug("Failed to hard delete device: no matching record found", zap.String("device_id", deviceID.String()))
+		return apperror.ErrNotFound.WithMessagef("hard delete operation failed: no matching %s found", domain.EntityDevice)
 	}
 	return nil
 }
 
-func (r *DeviceRepositoryPostgres) SoftDelete(ctx context.Context, deviceID uuid.UUID) error {
+func (r *DeviceRepositoryPostgres) Delete(ctx context.Context, deviceID uuid.UUID) error {
 	tx := r.db.WithContext(ctx).Where("id = ?", deviceID).Delete(&model.Device{})
 	if tx.Error != nil {
+		r.logger.Debug("Failed to soft delete", zap.String("device_id", deviceID.String()), zap.Error(tx.Error))
 		return apperror.MapDBError(tx.Error, domain.EntityDevice)
 	}
 	if tx.RowsAffected == 0 {
-		return apperror.ErrNotFound.WithMessagef("cannot hard delete %s: no matching record found", domain.EntityDevice)
+		var exist bool
+		r.db.WithContext(ctx).Unscoped().Model(&model.Device{}).Select("count(*) > 0").Where("id = ?", deviceID).Find(&exist)
+		if !exist {
+			r.logger.Debug("Failed to soft delete device: no matching record found", zap.String("device_id", deviceID.String()))
+			return apperror.ErrNotFound.WithMessagef("delete operation failed: %s with ID %s not found", domain.EntityDevice, deviceID)
+		}
+		r.logger.Debug("Failed to soft delete device: device not found or already deleted", zap.String("device_id", deviceID.String()))
+		return apperror.ErrNotFound.WithMessagef("delete operation failed: %s not found or already soft deleted", domain.EntityDevice)
 	}
 	return nil
 }
 
-func (r *DeviceRepositoryPostgres) FindAll(ctx context.Context, p *pagination.Pagination) ([]*model.Device, int64, error) {
-	var (
-		deviceList       []model.Device
-		totalDeviceCount int64
-	)
-
-	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&model.Device{}).Count(&totalDeviceCount).Error; err != nil {
-			return err
-		}
-		query := tx.Offset(p.GetOffset()).Limit(p.GetLimit())
-		if orderClause := p.GetSortOrderClause(); orderClause != "" {
-			query.Order(orderClause)
-		}
-
-		return query.Find(&deviceList).Error
-	})
-	if err != nil {
-		return nil, 0, apperror.MapDBError(err, domain.EntityDevice)
+func (r *DeviceRepositoryPostgres) Recover(ctx context.Context, deviceID uuid.UUID) error {
+	tx := r.db.WithContext(ctx).Model(&model.Device{}).Where("id = ?", deviceID).Update("deleted_at", nil)
+	if tx.Error != nil {
+		r.logger.Debug("Failed to recover deleted device", zap.String("device_id", deviceID.String()), zap.Error(tx.Error))
+		return apperror.MapDBError(tx.Error, domain.EntityDevice)
 	}
-	devicesPtrList := utils.ConvertVectorToPointerVector(deviceList)
-	return devicesPtrList, totalDeviceCount, nil
+	if tx.RowsAffected == 0 {
+		r.logger.Debug("Failed to recover deleted device: no matching record found", zap.String("device_id", deviceID.String()))
+		return apperror.ErrNotFound.WithMessagef("delete operation failed: no matching %s found", domain.EntityDevice)
+	}
+	return nil
 }
 
-// func (r *DeviceRepositoryPostgres) FindByOwnerID(ctx context.Context, ownerID uuid.UUID, p *pagination.Pagination) ([]*model.Device, int64, error) {
-// 	ctx, cancel := context.WithTimeout(ctx, r.queryTimeout)
-// 	defer cancel()
+func (r *DeviceRepositoryPostgres) List(ctx context.Context, filter *domain.DeviceFilter, opt ...*pagination.Pagination) ([]*model.Device, int64, error) {
+	var paginationConfig *pagination.Pagination
+	if len(opt) > 0 {
+		paginationConfig = opt[0]
+	}
 
-// 	var (
-// 		deviceList       []model.Device
-// 		totalDeviceCount int64
-// 	)
+	queryBuilder := func(tx *gorm.DB) *gorm.DB {
+		if filter.Name != nil {
+			tx = tx.Where("name ILIKE ?", filter.Name)
+		}
+		if filter.Status != nil {
+			tx = tx.Where("status = ?", filter.Status)
+		}
+		return tx
+	}
 
-// 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-// 		if err := tx.Model(&model.Device{}).Where("owner_id = ?", ownerID).Count(&totalDeviceCount).Error; err != nil {
-// 			return err
-// 		}
+	if paginationConfig != nil {
+		devices, totalDevice, err := FindWithPagination[model.Device](ctx, r.db, paginationConfig, queryBuilder, r.logger)
+		if err != nil {
+			r.logger.Debug("Failed to list devices with pagination", zap.Error(err))
+			return nil, 0, apperror.MapDBError(err, domain.EntityDevice)
+		}
+		return utils.ConvertVectorToPointerVector(devices), totalDevice, nil
+	}
 
-// 		query := tx.Offset(p.GetOffset()).Limit(p.GetLimit())
-// 		if orderClause := p.GetSortOrderClause(); orderClause != "" {
-// 			query = query.Order(orderClause)
-// 		}
+	var devices []model.Device
+	if err := queryBuilder(r.db.WithContext(ctx)).Find(&devices).Error; err != nil {
+		r.logger.Debug("Failed to list devices without pagination", zap.Error(err))
+		return nil, 0, err
+	}
 
-// 		return query.Where("owner_id = ?", ownerID).Find(&deviceList).Error
-// 	})
-// 	if err != nil {
-// 		return nil, 0, repository.HandleRepoError("find by owner id (transaction)", err, apperror.ErrDBQuery, r.log)
-// 	}
-// 	devicesPtrList := utils.ConvertVectorToPointerVector(deviceList)
-// 	return devicesPtrList, totalDeviceCount, nil
+	return utils.ConvertVectorToPointerVector(devices), int64(len(devices)), nil
+}
 
-// }
+func (r *DeviceRepositoryPostgres) GetByOwnerID(ctx context.Context, ownerID uuid.UUID, paginationConfig *pagination.Pagination) ([]*model.Device, int64, error) {
+	queryBuilder := func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("owner_id = ?", ownerID)
+	}
+
+	devices, totalDevice, err := FindWithPagination[model.Device](ctx, r.db, paginationConfig, queryBuilder, r.logger)
+	if err != nil {
+		r.logger.Debug("Failed to list devices by owner ID with pagination", zap.Error(err))
+		return nil, 0, apperror.MapDBError(err, domain.EntityDevice)
+	}
+	return utils.ConvertVectorToPointerVector(devices), totalDevice, nil
+}
+
+func (r *DeviceRepositoryPostgres) GetByStatus(ctx context.Context, status model.DeviceStatus, paginationConfig *pagination.Pagination) ([]*model.Device, int64, error) {
+	queryBuilder := func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("status = ?", string(status))
+	}
+
+	devices, totalDevice, err := FindWithPagination[model.Device](ctx, r.db, paginationConfig, queryBuilder, r.logger)
+	if err != nil {
+		r.logger.Debug("Failed to list devices by status with pagination", zap.Error(err))
+		return nil, 0, apperror.MapDBError(err, domain.EntityDevice)
+	}
+	return utils.ConvertVectorToPointerVector(devices), totalDevice, nil
+}
+
+func (r *DeviceRepositoryPostgres) GetDeleted(ctx context.Context, paginationConfig *pagination.Pagination) ([]*model.Device, int64, error) {
+	queryBuilder := func(tx *gorm.DB) *gorm.DB {
+		return tx.Unscoped().Where("deleted_at IS NOT NULL")
+	}
+
+	devices, totalDevice, err := FindWithPagination[model.Device](ctx, r.db, paginationConfig, queryBuilder, r.logger)
+	if err != nil {
+		r.logger.Debug("Failed to list deleted by  with pagination", zap.Error(err))
+		return nil, 0, apperror.MapDBError(err, domain.EntityDevice)
+	}
+	return utils.ConvertVectorToPointerVector(devices), totalDevice, nil
+}
+
+func (r *DeviceRepositoryPostgres) SearchByName(ctx context.Context, searchStr string, paginationConfig *pagination.Pagination) ([]*model.Device, int64, error) {
+	queryBuilder := func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("name ILIKE ?", "%"+searchStr+"%")
+	}
+
+	devices, totalDevice, err := FindWithPagination[model.Device](ctx, r.db, paginationConfig, queryBuilder, r.logger)
+	if err != nil {
+		r.logger.Debug("Failed to search devices by name with pagination", zap.Error(err))
+		return nil, 0, apperror.MapDBError(err, domain.EntityDevice)
+	}
+	return utils.ConvertVectorToPointerVector(devices), totalDevice, nil
+}
+
+func (r *DeviceRepositoryPostgres) SearchByTags(ctx context.Context, tags []string, paginationConfig *pagination.Pagination) ([]*model.Device, int64, error) {
+	queryBuilder := func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("tags @> ?", tags)
+	}
+
+	devices, totalDevice, err := FindWithPagination[model.Device](ctx, r.db, paginationConfig, queryBuilder, r.logger)
+	if err != nil {
+		r.logger.Debug("Failed to search devices by tags with pagination", zap.Error(err))
+		return nil, 0, apperror.MapDBError(err, domain.EntityDevice)
+	}
+	return utils.ConvertVectorToPointerVector(devices), totalDevice, nil
+}
+
+func (r *DeviceRepositoryPostgres) SearchByCapabilities(ctx context.Context, capabilities []string, paginationConfig *pagination.Pagination) ([]*model.Device, int64, error) {
+	queryBuilder := func(tx *gorm.DB) *gorm.DB {
+		return tx.Where("capabilities @> ?", capabilities)
+	}
+
+	devices, totalDevice, err := FindWithPagination[model.Device](ctx, r.db, paginationConfig, queryBuilder, r.logger)
+	if err != nil {
+		r.logger.Debug("Failed to search devices by capabilities with pagination", zap.Error(err))
+		return nil, 0, apperror.MapDBError(err, domain.EntityDevice)
+	}
+	return utils.ConvertVectorToPointerVector(devices), totalDevice, nil
+}
+
+func (r *DeviceRepositoryPostgres) AssignOwner(ctx context.Context, deviceID uuid.UUID, ownerID uuid.UUID) error {
+	tx := r.db.WithContext(ctx).Model(&model.Device{}).Where("id = ?", deviceID).Update("owner_id", ownerID)
+	if tx.Error != nil {
+		r.logger.Debug("Failed to assign owner to device", zap.Error(tx.Error), zap.String("device_id", deviceID.String()), zap.String("owner_id", ownerID.String()))
+		return apperror.MapDBError(tx.Error, domain.EntityDevice)
+	}
+	if tx.RowsAffected == 0 {
+		r.logger.Debug("Failed to assign owner: no matching record found", zap.String("device_id", deviceID.String()), zap.String("owner_id", ownerID.String()))
+		return apperror.ErrNotFound.WithMessagef("assign owner operation failed: no matching %s found", domain.EntityDevice)
+	}
+	return nil
+}
+
+func (r *DeviceRepositoryPostgres) UpdateStatus(ctx context.Context, deviceID uuid.UUID, newStatus model.DeviceStatus) error {
+	tx := r.db.WithContext(ctx).Model(&model.Device{}).Where("id = ?", deviceID).Update("status", newStatus)
+	if tx.Error != nil {
+		r.logger.Debug("Failed to update device status", zap.Error(tx.Error), zap.String("device_id", deviceID.String()), zap.String("status", string(newStatus)))
+		return apperror.MapDBError(tx.Error, domain.EntityDevice)
+	}
+	if tx.RowsAffected == 0 {
+		r.logger.Debug("Failed to update device status: no matching record found", zap.String("device_id", deviceID.String()), zap.String("status", string(newStatus)))
+		return apperror.ErrNotFound.WithMessagef("update device status operation failed: no matching %s found", domain.EntityDevice)
+	}
+	return nil
+}
+
+func (r *DeviceRepositoryPostgres) UpdateLastConnected(ctx context.Context, deviceID uuid.UUID, timestamp time.Time) error {
+	tx := r.db.WithContext(ctx).Model(&model.Device{}).Where("id = ?", deviceID).Update("last_connected", timestamp)
+	if tx.Error != nil {
+		r.logger.Debug("Failed to update last connected", zap.Error(tx.Error), zap.String("device_id", deviceID.String()))
+		return apperror.MapDBError(tx.Error, domain.EntityDevice)
+	}
+	if tx.RowsAffected == 0 {
+		r.logger.Debug("Failed to update last connected: no matching record found", zap.String("device_id", deviceID.String()))
+		return apperror.ErrNotFound.WithMessagef("update last connected operation failed: no matching %s found", domain.EntityDevice)
+	}
+	return nil
+}
+
+func (r *DeviceRepositoryPostgres) CountByStatus(ctx context.Context) (map[model.DeviceStatus]int64, error) {
+	type countResult struct {
+		StatusName model.DeviceStatus
+		Count      int64
+	}
+
+	var results []countResult
+	if err := r.db.WithContext(ctx).Model(&model.Device{}).Select("status, count(*) as count").Group("status").Find(&results).Error; err != nil {
+		r.logger.Debug("Failed to count by status")
+		return nil, apperror.MapDBError(err, domain.EntityDevice)
+	}
+
+	// restructure
+	StatusCountMap := make(map[model.DeviceStatus]int64, len(results))
+	for _, r := range results {
+		StatusCountMap[r.StatusName] = r.Count
+	}
+	return StatusCountMap, nil
+}
+
+func (r *DeviceRepositoryPostgres) FindByMACAddr(ctx context.Context, macAddr string) (*model.Device, error) {
+	var device model.Device
+	if err := r.db.WithContext(ctx).Model(&model.Device{}).Where("mac_address = ?", macAddr).First(&device).Error; err != nil {
+		return nil, apperror.MapDBError(err, domain.EntityDevice)
+	}
+	return &device, nil
+}
+
+func (r *DeviceRepositoryPostgres) ExistByMACAddr(ctx context.Context, macAddr string) (bool, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&model.Device{}).Where("mac_address = ?", macAddr).Count(&count).Error; err != nil {
+		return false, apperror.MapDBError(err, domain.EntityDevice)
+	}
+	return count > 1, nil
+}
+
+func (r *DeviceRepositoryPostgres) MarkAsProvisioned(ctx context.Context, deviceID uuid.UUID) error {
+	tx := r.db.WithContext(ctx).Model(&model.Device{}).Where("id = ?", deviceID).Update("status", model.DeviceStatusProvisioned)
+	if tx.Error != nil {
+		r.logger.Debug("Failed to mark device as provisioned", zap.Error(tx.Error), zap.String("device_id", deviceID.String()))
+		return apperror.MapDBError(tx.Error, domain.EntityDevice)
+	}
+	if tx.RowsAffected == 0 {
+		r.logger.Debug("Failed to mark device as provisioned: no matching record found", zap.String("device_id", deviceID.String()))
+		return apperror.ErrNotFound.WithMessagef("mark device as provisioned operation failed: no matching %s found", domain.EntityDevice)
+	}
+	return nil
+}
 
 // func (r *DeviceRepositoryPostgres) GetDeviceCountTransaction(tx *gorm.DB) (int64, error) {
 // 	var count int64
@@ -194,7 +388,7 @@ func (r *DeviceRepositoryPostgres) FindAll(ctx context.Context, p *pagination.Pa
 // 		return err
 // 	})
 // 	if err != nil {
-// 		r.log.Error("failed to bulk create device", zap.Int("count", len(input)), zap.Error(err))
+// 		r.log.Error("Failed to bulk create device", zap.Int("count", len(input)), zap.Error(err))
 // 		return nil, err
 // 	}
 // 	r.log.Debug("bulk devices created", zap.Int("count", len(input)))
@@ -224,7 +418,7 @@ func (r *DeviceRepositoryPostgres) FindAll(ctx context.Context, p *pagination.Pa
 // 		return r.bulkDeleteTx(ctx, tx, input)
 // 	})
 // 	if err != nil {
-// 		return apperror.ErrDBDelete.WithMessage("failed to delete devices in bulk")
+// 		return apperror.ErrDBDelete.WithMessage("Failed to delete devices in bulk")
 // 	}
 
 // 	r.log.Debug("bulk devices deleted", zap.Int("count", len(input)))
@@ -291,7 +485,6 @@ func (r *DeviceRepositoryPostgres) FindAll(ctx context.Context, p *pagination.Pa
 // 	inputIDs := make([]string, 0, len(deviceList))
 
 // 	for _, d := range deviceList {
-// 		fmt.Println(d.FirmwareVersion)
 // 		inputIDs = append(inputIDs, d.ID.String())
 // 	}
 
@@ -401,7 +594,7 @@ func (r *DeviceRepositoryPostgres) FindAll(ctx context.Context, p *pagination.Pa
 // 		for _, update := range batchUpdate {
 // 			status, ok := update.Updates.(string)
 // 			if !ok {
-// 				return nil, repository.HandleRepoError(op, errors.New("failed to batch update status, invalid data"), apperror.ErrDBUpdate, r.log)
+// 				return nil, repository.HandleRepoError(op, errors.New("Failed to batch update status, invalid data"), apperror.ErrDBUpdate, r.log)
 // 			}
 
 // 			caseExp += "WHEN ? THEN ?"

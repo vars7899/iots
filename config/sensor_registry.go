@@ -63,8 +63,6 @@ func LoadSensorSchemaRegistry(filename string, filetype string, path string, bas
 		l:      l,
 	}
 
-	fmt.Println(schemaCfg)
-
 	v.WatchConfig()
 	v.OnConfigChange(func(e fsnotify.Event) {
 		l.Info("Sensor schema config file changed. Reloading...", zap.String("event", e.Name))

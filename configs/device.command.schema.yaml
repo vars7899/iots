@@ -1,0 +1,47 @@
+# command direction -> explain how the command will flow in the pipeline
+# note -> follow convention, put the emitter always on the left and the receiver on the right (currently only 
+# support single emitter and single receiver)
+# d = device
+# v = virtual_device
+# s = sensor
+# u = user
+# command code convention ->
+# prefix@command
+
+command:
+  # device basically says 'Hi, I'm online'
+  "device@init":
+    command: "init"   
+    type: "command"
+    schema_version: 1             
+    direction: "d>s"              
+    description: "sent by device to confirm connection."
+    payload_schema:
+      required:
+        - firmware_version
+        - sensors
+      properties:
+        firmware_version:
+            data_type: string
+        sensors:
+            data_type: string_array
+  # server tells the user that the device is 'ready'
+  "device@init_ack":
+    command: "init_ack"
+    type: "ack"
+    schema_version: 1
+    direction: "s>u"
+    description: "acknowledges device connection readiness and session state."
+    payload_schema:
+      required:
+        - status
+        - session_id
+      properties:
+        status:
+          data_type: string
+        session_id:
+          data_type: string
+        firmware_version:
+          data_type: string
+        sensors:
+          data_type: string_array

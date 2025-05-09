@@ -24,5 +24,13 @@ services:
       --maxmemory-policy allkeys-lru
       --appendonly yes
 
+  nats:
+    image: nats:scratch
+    container_name: iots_nats
+    restart: always
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
 volumes:
   pgdata:

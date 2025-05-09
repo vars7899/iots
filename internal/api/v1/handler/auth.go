@@ -44,7 +44,7 @@ func (h *AuthHandler) SetupRoutes(e *echo.Group) {
 	e.POST("/request-password-reset", h.RequestPasswordReset)
 	e.POST("/password-reset", h.PasswordReset)
 
-	// protected routes
+	// authentication protected routes
 	e.POST("/logout", h.Logout, middleware.NewJWTMiddleware(h.authTokenService, h.logger), middleware.NewJTIMiddleware(h.authTokenService, h.logger))
 }
 

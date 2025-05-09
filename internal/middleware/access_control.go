@@ -43,3 +43,27 @@ func NewAccessControlMiddleware(accessControlService auth.AccessControlService, 
 		}
 	}
 }
+
+func NewPermissionRequiredMiddlewareGenerator(accessControlService auth.AccessControlService, logger *zap.Logger) func(string, string) echo.MiddlewareFunc {
+	return func(resource string, action string) echo.MiddlewareFunc {
+		return func(next echo.HandlerFunc) echo.HandlerFunc {
+			return func(c echo.Context) error {
+				userIDInterface := c.Get(string(contextkey.UserIDKey))
+				userID, ok := userIDInterface.(uuid.UUID)
+				if !ok || userID == uuid.Nil {
+					return apperror.ErrInternal.WithMessage("Authorization user ID missing").Wrap(errors.New("user ID missing or invalid from context"))
+				}
+
+				allowed, err := accessControlService.CheckPermission(userID, resource, action)
+				if err != nil {
+					return apperror.ErrInternal.WithMessage("Authorization check failed due to internal error").Wrap(err)
+				}
+				if !allowed {
+					return apperror.ErrForbidden.WithMessage("Insufficient permissions")
+				}
+
+				return next(c)
+			}
+		}
+	}
+}

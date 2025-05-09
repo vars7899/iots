@@ -1,7 +1,6 @@
 package token
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -122,7 +121,6 @@ func (j *JwtTokenService) ParseAccessToken(tokenStr string) (*AccessTokenClaims,
 		return []byte(j.config.AccessSecret), nil
 	})
 	if err != nil {
-		fmt.Println(err)
 		return nil, apperror.ErrInvalidToken.WithMessage("failed to parse access token").Wrap(err)
 	}
 

@@ -92,8 +92,6 @@ func (s *JTIStore) RevokeJTI(ctx context.Context, jti string, expiresAt time.Tim
 		return apperror.ErrInternal.WithMessage("Failed to check token status").Wrap(err)
 	}
 
-	fmt.Println("ppppp", exists)
-
 	// If not found, log but don't fail
 	if exists == 0 {
 		s.logger.Warn("Attempting to revoke unknown JTI", zap.String("jti", jti))

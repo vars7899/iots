@@ -14,12 +14,14 @@ import (
 var GlobalConfig *AppConfig
 
 type AppConfig struct {
-	Server   *ServerConfig   `mapstructure:"server"`
-	Postgres *PostgresConfig `mapstructure:"postgres"`
-	Jwt      *JwtConfig      `mapstructure:"jwt"`
-	Redis    *RedisConfig    `mapstructure:"redis"`
-	Auth     *AuthConfig     `mapstructure:"auth"`
-	Frontend *FrontendConfig `mapstructure:"frontend"`
+	Server    *ServerConfig    `mapstructure:"server"`
+	Postgres  *PostgresConfig  `mapstructure:"postgres"`
+	Jwt       *JwtConfig       `mapstructure:"jwt"`
+	Redis     *RedisConfig     `mapstructure:"redis"`
+	Auth      *AuthConfig      `mapstructure:"auth"`
+	Frontend  *FrontendConfig  `mapstructure:"frontend"`
+	Websocket *WebsocketConfig `mapstructure:"websocket"`
+	Nats      *NatsConfig      `mapstructure:"nats"`
 }
 
 type ServerConfig struct {
@@ -38,10 +40,19 @@ type PostgresConfig struct {
 }
 
 type JwtConfig struct {
-	AccessSecret    string        `mapstructure:"access_secret"`
-	RefreshSecret   string        `mapstructure:"refresh_secret"`
-	AccessTokenTTL  time.Duration `mapstructure:"access_token_ttl"`
-	RefreshTokenTTL time.Duration `mapstructure:"refresh_token_ttl"`
+	AccessSecret             string        `mapstructure:"access_secret"`
+	RefreshSecret            string        `mapstructure:"refresh_secret"`
+	AccessTokenTTL           time.Duration `mapstructure:"access_token_ttl"`
+	RefreshTokenTTL          time.Duration `mapstructure:"refresh_token_ttl"`
+	DeviceConnectionTokenTTL time.Duration `mapstructure:"device_connection_token_ttl"`
+	DeviceRefreshTokenTTL    time.Duration `mapstructure:"device_refresh_token_ttl"`
+	Leeway                   time.Duration `mapstructure:"leeway"`
+}
+
+type WebsocketConfig struct {
+	PingTimeout  time.Duration `mapstructure:"ping_timeout"`
+	PongTimeout  time.Duration `mapstructure:"pong_timeout"`
+	ReadDeadline int64         `mapstructure:"read_deadline"`
 }
 
 type RedisConfig struct {
@@ -61,6 +72,10 @@ type FrontendConfig struct {
 	BaseUrl string `mapstructure:"base_url"`
 }
 
+type NatsConfig struct {
+	BaseUrl string `mapstructure:"base_url"`
+}
+
 var envBindings = map[string]string{
 	"postgres.db_user":     "POSTGRES_DB_USER",
 	"postgres.db_password": "POSTGRES_DB_PASSWORD",
@@ -69,6 +84,7 @@ var envBindings = map[string]string{
 	"jwt.refresh_secret":   "JWT_REFRESH_SECRET",
 	"redis.password":       "REDIS_PASSWORD",
 	"frontend.base_url":    "FRONTEND_BASE_URL",
+	"nats.base_url":        "NATS_BASE_URL",
 }
 
 func Load(filename string, filetype string, path string, baseLogger *zap.Logger) error {

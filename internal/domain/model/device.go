@@ -6,34 +6,72 @@ import (
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"github.com/vars7899/iots/internal/domain"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
 type Device struct {
-	ID              uuid.UUID             `gorm:"type:uuid;primaryKey;default:gen_random_uuid();" json:"id"`
-	Name            string                `gorm:"type:varchar(255);not null;index" json:"name"`
-	Description     string                `gorm:"type:text;not null" json:"description"`
-	Manufacturer    string                `gorm:"type:varchar(255);not null;index" json:"manufacturer"`
-	ModelNumber     string                `gorm:"type:varchar(255);not null" json:"model_number"`
-	SerialNumber    string                `gorm:"type:varchar(255);not null" json:"serial_number"`
-	FirmwareVersion string                `gorm:"type:varchar(20);not null" json:"firmware_version"`
-	IPAddress       string                `gorm:"type:varchar(45);index" json:"ip_address"`
-	MACAddress      string                `gorm:"type:varchar(17);index" json:"mac_address"`
-	IsOnline        bool                  `gorm:"default:false" json:"is_online"`
-	ConnectionType  domain.ConnectionType `gorm:"type:varchar(20)" json:"connection_type"`
-	Status          domain.Status         `gorm:"type:varchar(20);default:'pending'" json:"status"`
-	Location        domain.GeoLocation    `gorm:"embedded" json:"location"`
-	CreatedAt       time.Time             `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt       time.Time             `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt       gorm.DeletedAt        `gorm:"index" json:"-"`
-	LastConnected   *time.Time            `json:"last_connected"`
-	Metadata        datatypes.JSON        `gorm:"type:jsonb" json:"metadata"`
-	Tags            pq.StringArray        `gorm:"type:text[]" json:"tags"`
-	Capabilities    pq.StringArray        `gorm:"type:text[]" json:"capabilities"`
-	TelemetryConfig TelemetryConfig       `gorm:"embedded" json:"telemetry_config"`
-	BroadcastConfig BroadcastConfig       `gorm:"embedded" json:"broadcast_config"`
-	// Sensors         []sensor.Sensor `gorm:"foreignKey:DeviceID" json:"sensors"`
+	ID              uuid.UUID           `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid();"`
+	OwnerID         *uuid.UUID          `json:"owner_id" gorm:"type:uuid;index"`
+	ProvisionCode   string              `json:"provision_code" gorm:"type:text;not null"`
+	ConnectionToken string              `json:"-" gorm:"type:text;not null"`
+	Name            string              `json:"name" gorm:"type:varchar(255);not null;index"`
+	Description     string              `json:"description" gorm:"type:text"`
+	IPAddress       string              `json:"ip_address" gorm:"type:varchar(45);index"`
+	MACAddress      string              `json:"mac_address" gorm:"type:varchar(17);index"`
+	Status          DeviceStatus        `json:"status" gorm:"type:varchar(20);default:'pending_provision'"`
+	Specification   DeviceSpecification `json:"specification" gorm:"embedded"`
+	TelemetryConfig TelemetryConfig     `json:"telemetry_config" gorm:"embedded"`
+	BroadcastConfig BroadcastConfig     `json:"broadcast_config" gorm:"embedded"`
+	Location        domain.GeoLocation  `json:"location" gorm:"embedded"`
+	Metadata        datatypes.JSON      `json:"metadata" gorm:"type:jsonb"`
+	Tags            pq.StringArray      `json:"tags" gorm:"type:text[]"`
+	Capabilities    pq.StringArray      `json:"capabilities" gorm:"type:text[]"`
+	LastConnected   *time.Time          `json:"last_connected"`
+	CreatedAt       time.Time           `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt       time.Time           `json:"updated_at" gorm:"autoUpdateTime"`
+	DeletedAt       gorm.DeletedAt      `json:"-" gorm:"index"`
+	Sensors         []Sensor            `json:"sensors" gorm:"foreignKey:DeviceID;constraints:OnDelete:CASCADE,OnUpdate:CASCADE"`
+}
+
+func (d *Device) PublicView() *Device {
+	return d
+}
+
+func (d *Device) StoreProvisionCode(codeStr string) error {
+	hashedCode, err := bcrypt.GenerateFromPassword([]byte(codeStr), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	d.ProvisionCode = string(hashedCode)
+	return nil
+}
+
+func (d *Device) CompareProvisionCode(raw string) error {
+	return bcrypt.CompareHashAndPassword([]byte(d.ProvisionCode), []byte(raw))
+}
+
+func (d *Device) HashConnectionToken(tokenStr string) error {
+	hashed, err := bcrypt.GenerateFromPassword([]byte(tokenStr), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	d.ConnectionToken = string(hashed)
+	return nil
+}
+
+func (d *Device) CompareConnectionToken(rawStr string) error {
+	return bcrypt.CompareHashAndPassword([]byte(d.ConnectionToken), []byte(rawStr))
+}
+
+type DeviceSpecification struct {
+	Manufacturer    string `json:"manufacturer" gorm:"type:varchar(255);not null;index"`
+	ModelNumber     string `json:"model_number" gorm:"type:varchar(255);not null"`
+	SerialNumber    string `json:"serial_number" gorm:"type:varchar(255);not null"`
+	FirmwareVersion string `json:"firmware_version" gorm:"type:varchar(20)"`
+	HardwareVersion string `json:"hardware_version" gorm:"type:varchar(20)"`
+	SoftwareVersion string `json:"software_version" gorm:"type:varchar(20)"`
 }
 
 type TelemetryConfig struct {
@@ -70,19 +108,50 @@ type AccessGroup struct {
 }
 
 // DeviceEvent represents significant events in a device's lifecycle
-type DeviceEvent struct {
-	ID        uuid.UUID `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	DeviceID  uuid.UUID `json:"device_id" gorm:"type:uuid"`
-	EventType string    `json:"event_type"` // connection, disconnection, error, update, etc.
-	Severity  string    `json:"severity"`   // info, warning, error, critical
-	Message   string    `json:"message"`
-	Metadata  JSON      `json:"metadata" gorm:"type:jsonb"`
-	CreatedAt time.Time `json:"created_at"`
-}
+// type DeviceEvent struct {
+// 	ID        uuid.UUID `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+// 	DeviceID  uuid.UUID `json:"device_id" gorm:"type:uuid"`
+// 	EventType string    `json:"event_type"` // connection, disconnection, error, update, etc.
+// 	Severity  string    `json:"severity"`   // info, warning, error, critical
+// 	Message   string    `json:"message"`
+// 	Metadata  JSON      `json:"metadata" gorm:"type:jsonb"`
+// 	CreatedAt time.Time `json:"created_at"`
+// }
 
 type JSON map[string]interface{}
 
 type DeviceUpdate struct {
 	ID      uuid.UUID
 	Updates interface{}
+}
+
+// DeviceStatus represent specific lifecycle status of the digital device
+type DeviceStatus string
+
+var (
+	DeviceStatusPendingProvision DeviceStatus = "pending_provision"
+	DeviceStatusProvisioned      DeviceStatus = "provisioned"
+	DeviceStatusDecommissioned   DeviceStatus = "decommissioned"
+	DeviceStatusOnline           DeviceStatus = "online"
+	DeviceStatusOffline          DeviceStatus = "offline"
+	DeviceStatusFaulty           DeviceStatus = "faulty"
+	DeviceStatusUnderMaintenance DeviceStatus = "under_maintenance"
+	DeviceStatusSuspended        DeviceStatus = "suspended"
+)
+
+func IsValidDeviceStatus(inputStr string) bool {
+	switch DeviceStatus(inputStr) {
+	case
+		DeviceStatusPendingProvision,
+		DeviceStatusProvisioned,
+		DeviceStatusDecommissioned,
+		DeviceStatusOnline,
+		DeviceStatusOffline,
+		DeviceStatusFaulty,
+		DeviceStatusUnderMaintenance,
+		DeviceStatusSuspended:
+		return true
+	default:
+		return false
+	}
 }

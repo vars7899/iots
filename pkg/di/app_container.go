@@ -7,6 +7,7 @@ import (
 	"github.com/vars7899/iots/config"
 	"github.com/vars7899/iots/internal/cache"
 	"github.com/vars7899/iots/internal/cache/redis"
+	"github.com/vars7899/iots/internal/middleware"
 	"github.com/vars7899/iots/internal/repository"
 	"github.com/vars7899/iots/internal/repository/postgres"
 	"github.com/vars7899/iots/internal/service"
@@ -14,13 +15,16 @@ import (
 	"github.com/vars7899/iots/internal/ws"
 	"github.com/vars7899/iots/pkg/apperror"
 	"github.com/vars7899/iots/pkg/auth"
+	"github.com/vars7899/iots/pkg/auth/deviceauth"
 	"github.com/vars7899/iots/pkg/auth/token"
 	"github.com/vars7899/iots/pkg/logger"
+	"github.com/vars7899/iots/pkg/pubsub"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type AppContainer struct {
+	Api          *APIProvider
 	Repositories *RepositoryProvider
 	Services     *ServiceProvider
 	CoreServices *CoreServiceProvider
@@ -30,6 +34,10 @@ type AppContainer struct {
 	Config       *config.AppConfig
 	WaitGroup    *sync.WaitGroup
 	Ctx          context.Context
+}
+
+type APIProvider struct {
+	Middleware *middleware.MiddlewareRegistry
 }
 
 type RepositoryProvider struct {
@@ -43,7 +51,7 @@ type RepositoryProvider struct {
 
 type ServiceProvider struct {
 	SensorService             *service.SensorService
-	DeviceService             *service.DeviceService
+	DeviceService             service.DeviceService
 	UserService               service.UserService
 	TelemetryService          *service.TelemetryService
 	RoleService               service.RoleService
@@ -52,10 +60,12 @@ type ServiceProvider struct {
 }
 
 type CoreServiceProvider struct {
+	NatsPublisher        pubsub.PubSubPublisher // cross service communication
 	AuthTokenService     auth.AuthTokenService
 	AccessControlService auth.AccessControlService
 	JWTTokenService      token.TokenService
 	JTIStoreService      cache.JTIStore
+	DeviceAuthService    deviceauth.DeviceAuthService
 }
 
 func NewAppContainer(ctx context.Context, wg *sync.WaitGroup, db *gorm.DB, cfg *config.AppConfig, baseLogger *zap.Logger) (*AppContainer, error) {
@@ -73,6 +83,12 @@ func NewAppContainer(ctx context.Context, wg *sync.WaitGroup, db *gorm.DB, cfg *
 		return nil, err
 	}
 
+	apiProvider, err := NewApiProvider(coreServiceProvider, logger)
+	if err != nil {
+		logger.Error("failed to initialize api provider", zap.Error(err))
+		return nil, err
+	}
+
 	serviceProvider, err := NewServiceProvider(repoProvider, coreServiceProvider, cfg, baseLogger)
 	if err != nil {
 		logger.Error("failed to initialize service provider", zap.Error(err))
@@ -80,6 +96,7 @@ func NewAppContainer(ctx context.Context, wg *sync.WaitGroup, db *gorm.DB, cfg *
 	}
 
 	a := &AppContainer{
+		Api:          apiProvider,
 		Repositories: repoProvider,
 		Services:     serviceProvider,
 		CoreServices: coreServiceProvider,
@@ -138,6 +155,10 @@ func NewRepositoryProvider(db *gorm.DB, baseLogger *zap.Logger) (*RepositoryProv
 func NewCoreServiceProvider(db *gorm.DB, cfg *config.AppConfig, baseLogger *zap.Logger) (*CoreServiceProvider, error) {
 	logger := logger.Named(baseLogger, "CoreServiceProvider")
 
+	if cfg.Nats.BaseUrl == "" {
+		logger.Error("Initialization failed: missing nats base url")
+		return nil, apperror.ErrMissingConfig.WithMessage("initialization failed: missing nats base url").AsInternal()
+	}
 	if db == nil {
 		logger.Error("CoreServiceProvider initialization failed: missing db")
 		return nil, apperror.ErrDBMissing.WithMessage("initialization failed: missing db")
@@ -161,15 +182,47 @@ func NewCoreServiceProvider(db *gorm.DB, cfg *config.AppConfig, baseLogger *zap.
 		return nil, apperror.ErrorHandler(err, apperror.ErrCodeInit, "failed to start access control service")
 	}
 
+	// Nats pubsub publisher
+	natsPubsub, err := pubsub.NewNatsPubSub(cfg.Nats.BaseUrl, logger)
+	if err != nil {
+		logger.Error("Nats publisher initialization failed", zap.Error(err))
+		return nil, apperror.ErrorHandler(err, apperror.ErrCodeInit)
+	}
+
+	deviceConnectionTokenService := deviceauth.NewDeviceConnectionTokenService(cfg.Jwt, logger)
+
 	jwtTokenService := token.NewJwtTokenService(cfg.Jwt, logger)
 	jtiStoreService := redis.NewRedisJTIStore(cfg.Redis, logger)
 	authTokenService := auth.NewAuthTokenManger(jwtTokenService, jtiStoreService, logger)
+	deviceAuthService := deviceauth.NewDeviceAuthManager(deviceConnectionTokenService, *jtiStoreService, logger)
 
 	return &CoreServiceProvider{
+		NatsPublisher:        natsPubsub,
 		JWTTokenService:      jwtTokenService,
 		JTIStoreService:      jtiStoreService,
 		AuthTokenService:     authTokenService,
 		AccessControlService: accessControlService,
+		DeviceAuthService:    deviceAuthService,
+	}, nil
+}
+
+func NewApiProvider(coreProvider *CoreServiceProvider, baseLogger *zap.Logger) (*APIProvider, error) {
+	logger := logger.Named(baseLogger, "APIProvider")
+	if coreProvider == nil {
+		logger.Error("APIProvider initialization failed: missing CoreServiceProvider")
+		return nil, apperror.ErrMissingDependency.WithMessage("missing core service provider")
+	}
+	if coreProvider.AuthTokenService == nil {
+		logger.Error("ServiceProvider initialization failed: missing CoreServiceProvider.AuthTokenService")
+		return nil, apperror.ErrMissingDependency.WithMessage("missing core service 'auth token service'")
+	}
+	if coreProvider.AccessControlService == nil {
+		logger.Error("ServiceProvider initialization failed: missing CoreServiceProvider.AccessControlService")
+		return nil, apperror.ErrMissingDependency.WithMessage("missing core service 'access control service'")
+	}
+
+	return &APIProvider{
+		Middleware: middleware.NewMiddlewareRegistry(coreProvider.AuthTokenService, coreProvider.AccessControlService, logger),
 	}, nil
 }
 
@@ -199,7 +252,7 @@ func NewServiceProvider(repoProvider *RepositoryProvider, coreProvider *CoreServ
 	resetPasswordTokenService := service.NewResetPasswordTokenService(repoProvider.ResetPasswordTokenRepository, repoProvider.UserRepository, logger)
 	userService := service.NewUserService(repoProvider.UserRepository, logger)
 	sensorService := service.NewSensorService(repoProvider.SensorRepository, logger)
-	deviceService := service.NewDeviceService(repoProvider.DeviceRepository, logger)
+	deviceService := service.NewDeviceService(repoProvider.DeviceRepository, coreProvider.DeviceAuthService, logger)
 	telemetryService := service.NewTelemetryService(repoProvider.TelemetryRepository, logger)
 	authService := service.NewAuthService(userService, roleService, coreProvider.AccessControlService, coreProvider.AuthTokenService, resetPasswordTokenService, config.GlobalConfig, logger)
 
